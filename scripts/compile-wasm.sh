@@ -50,7 +50,14 @@ if [ "$2" == "wallet-build" ]; then
     rm ${buildOutput}.gz 2>/dev/null
   fi
 
-  finalOutput="../PandoraPay-wallet/dist/build/wasm"
+  finalOutput="../PandoraPay-wallet/dist/build/wasm/"
+
+  if [ "$1" == "main" ]; then
+    finalOutput=${finalOutput}"PandoraPay-wallet-main.wasm"
+  fi
+  if [ "$1" == "helper" ]; then
+    finalOutput=${finalOutput}"PandoraPay-wallet-helper.wasm"
+  fi
 
   echo "Copy to wallet/build..."
   cp ${buildOutput} ${finalOutput}
@@ -63,7 +70,7 @@ if [ "$2" == "wallet-build" ]; then
     fi
     stat --printf="brotli size %s \n" ${buildOutput}.br
     echo "Copy to wallet/build..."
-    cp ${buildOutput}.br ${finalOutput}
+    cp ${buildOutput}.br ${finalOutput}.br
   elif [ "$3" == "zopfli" ]; then
     echo "Zipping using zopfli..."
     if ! zopfli ${buildOutput}; then
@@ -72,13 +79,13 @@ if [ "$2" == "wallet-build" ]; then
     fi
     stat --printf="zopfli gzip size: %s \n" ${buildOutput}.gz
     echo "Copy to wallet/build..."
-    cp ${buildOutput}.gz ${finalOutput}
+    cp ${buildOutput}.gz ${finalOutput}.gz
   else
     echo "Gzipping..."
     gzip --best ${buildOutput}
     stat --printf="gzip size %s \n" ${buildOutput}.gz
     echo "Copy to wallet/build..."
-    cp ${buildOutput}.gz ${finalOutput}
+    cp ${buildOutput}.gz ${finalOutput}.gz
   fi
 
   exit 1

@@ -3,7 +3,7 @@
 
 package arguments
 
-const commands = `PANDORA PAY WASM.
+const commands = `PANDORA CASH WASM.
 
 Usage:
   pandorapay [--pprof] [--version] [--network=network] [--debug] [--forging] [--new-devnet] [--node-name=name] [--set-genesis=genesis] [--store-wallet-type=type] [--store-chain-type=type] [--consensus=type] [--tcp-max-clients=limit] [--seed-wallet-nodes-info=bool] [--wallet-encrypt=args] [--wallet-decrypt=password] [--wallet-remove-encryption] [--wallet-export-shared-staked-address=args] [--instance=prefix] [--instance-id=id] [--exit]

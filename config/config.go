@@ -2,7 +2,7 @@ package config
 
 import (
 	"errors"
-	"github.com/blang/semver/v4"
+	"github.com/blang/semver"
 	"math/big"
 	"math/rand"
 	"pandora-pay/config/config_auth"
@@ -19,7 +19,7 @@ var (
 	CPU_THREADS        = 1
 	ARCHITECTURE       = ""
 	OS                 = ""
-	NAME               = "PANDORA PAY"
+	NAME               = "pandora cash"
 	VERSION            = semver.MustParse("0.0.1-test.0")
 	VERSION_STRING     = VERSION.String()
 	BUILD_VERSION      = ""
@@ -30,20 +30,20 @@ var (
 const (
 	TRANSACTIONS_MAX_DATA_LENGTH    = 512
 	TRANSACTIONS_ZETHER_RING_MAX    = 256
-	PROTOCOL_CRYPTOPGRAPHY_CONSTANT = "PANDORA"
+	PROTOCOL_CRYPTOPGRAPHY_CONSTANT = "pandora cash"
 )
 
 const (
-	MAIN_NET_NETWORK_BYTE           uint64 = 0
-	MAIN_NET_NETWORK_BYTE_PREFIX           = "PANDORA" // must have 7 characters
-	MAIN_NET_NETWORK_NAME                  = "MAIN"    // must have 7 characters
-	TEST_NET_NETWORK_BYTE           uint64 = 1033
-	TEST_NET_NETWORK_BYTE_PREFIX           = "PANTEST" // must have 7 characters
-	TEST_NET_NETWORK_NAME                  = "TEST"    // must have 7 characters
-	DEV_NET_NETWORK_BYTE            uint64 = 4255
-	DEV_NET_NETWORK_BYTE_PREFIX            = "PANDDEV" // must have 7 characters
-	DEV_NET_NETWORK_NAME                   = "DEV"     // must have 7 characters
-	NETWORK_BYTE_PREFIX_LENGTH             = 7
+	MAIN_NET_NETWORK_BYTE           uint64 = 1
+	MAIN_NET_NETWORK_BYTE_PREFIX           = "PCASH" // must have 7 characters
+	MAIN_NET_NETWORK_NAME                  = "MAIN"  // must have 7 characters
+	TEST_NET_NETWORK_BYTE           uint64 = 1034
+	TEST_NET_NETWORK_BYTE_PREFIX           = "TCASH" // must have 7 characters
+	TEST_NET_NETWORK_NAME                  = "TEST"  // must have 7 characters
+	DEV_NET_NETWORK_BYTE            uint64 = 4256
+	DEV_NET_NETWORK_BYTE_PREFIX            = "DCASH" // must have 7 characters
+	DEV_NET_NETWORK_NAME                   = "DEV"   // must have 7 characters
+	NETWORK_BYTE_PREFIX_LENGTH             = 5
 	NETWORK_TIMESTAMP_DRIFT_MAX     uint64 = 10
 	NETWORK_TIMESTAMP_DRIFT_MAX_INT int64  = 10
 )
