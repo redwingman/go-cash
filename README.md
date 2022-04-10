@@ -1,3 +1,19 @@
+# go-pandora-cash
+
+pandora cash is a fork of PandoraPay. Release Candidate (RC1).
+
+Notable changes:
+
+```
+Coin supply: 2.1 billion tokens.
+Distribution: halving every year.
+Block time: 100 seconds.
+No premine
+Insigificant Distribution to Bootstrap the consensus of the network was done using a Faucet.
+```
+
+xiangwei
+
 # go-pandora-pay
 
 PandoraPay blockchain in go
