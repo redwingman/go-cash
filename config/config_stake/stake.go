@@ -9,7 +9,14 @@ func GetRequiredStake(blockHeight uint64) (requiredStake uint64) {
 
 	var err error
 
-	if requiredStake, err = config_coins.ConvertToUnitsUint64(100); err != nil {
+	var amount uint64
+	if blockHeight < 30000 {
+		amount = 200
+	} else {
+		amount = 5000
+	}
+
+	if requiredStake, err = config_coins.ConvertToUnitsUint64(amount); err != nil {
 		panic(err)
 	}
 
@@ -26,5 +33,11 @@ func GetPendingStakeWindow(blockHeight uint64) uint64 {
 		return 10
 	}
 
-	return 60
+	if blockHeight < 10000 { //11 days
+		return 10 //0.27h
+	} else if blockHeight < 50000 {
+		return 120 //3.3 h
+	}
+
+	return 1000 //1.1 days
 }
