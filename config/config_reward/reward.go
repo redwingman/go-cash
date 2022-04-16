@@ -10,7 +10,7 @@ func GetRewardAt(blockHeight uint64) (reward uint64) {
 
 	cycle := int(math.Floor(float64(blockHeight) / blocksPerCycle()))
 
-	reward = 4000 / (1 << cycle)
+	reward = 3328 / (1 << cycle)
 
 	if reward < 1 {
 		reward = 0
