@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 )
 
@@ -29,6 +30,14 @@ func CloneBytes(a []byte) []byte {
 
 func DecodeHex(a string) []byte {
 	out, err := hex.DecodeString(a)
+	if err != nil {
+		panic(err)
+	}
+	return out
+}
+
+func DecodeBase64(a string) []byte {
+	out, err := base64.StdEncoding.DecodeString(a)
 	if err != nil {
 		panic(err)
 	}

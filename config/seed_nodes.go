@@ -7,16 +7,19 @@ type SeedNode struct {
 var (
 	MAIN_NET_SEED_NODES = []*SeedNode{
 		{
-			"ws://seed.mainnet.pandoracash.com:80/ws",
+			"wss://pandoraseed1.mooo.com:8080/ws",
 		},
 		{
-			"ws://seed.mainnet.pandoracash.com:443/ws",
+			"wss://pandoraseed1.mooo.com:8081/ws",
 		},
 		{
-			"ws://seed.mainnet.pandoracash.com:5102/ws",
+			"wss://pandoraseed1.mooo.com:8082/ws",
 		},
 		{
-			"ws://seed.mainnet.pandoracash.com:5100/ws",
+			"wss://pandoraseed1.mooo.com:8083/ws",
+		},
+		{
+			"wss://pandoraseed1.mooo.com:8084/ws",
 		},
 	}
 
