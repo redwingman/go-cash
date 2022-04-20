@@ -91,10 +91,11 @@ func _startMain() (err error) {
 
 	if runtime.GOARCH != "wasm" && globals.Arguments["--balance-decryptor-disable-init"] == false {
 		var tableSize int
-		if globals.Arguments["--balance-decryptor-disable-init"] != nil {
-			if tableSize, err = strconv.Atoi(globals.Arguments["--balance-decryptor-disable-init"].(string)); err != nil {
+		if globals.Arguments["--balance-decryptor-table-size"] != nil {
+			if tableSize, err = strconv.Atoi(globals.Arguments["--balance-decryptor-table-size"].(string)); err != nil {
 				return
 			}
+			tableSize = 1 << tableSize
 		}
 		go func() {
 			ctx, cancel := context.WithCancel(context.Background())
