@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"encoding/binary"
 	"errors"
 	"github.com/vmihailenco/msgpack/v5"
 	"pandora-pay/blockchain/blockchain_types"
@@ -15,7 +16,23 @@ import (
 
 func (chain *Blockchain) OpenExistsTx(hash []byte) (exists bool, errFinal error) {
 	errFinal = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
-		exists = reader.Exists("txHash:" + string(hash))
+		exists = reader.Exists("txHash:" + string(hash)) //optimized
+		return nil
+	})
+	return
+}
+
+func (chain *Blockchain) OpenExistsBlock(hash []byte) (exists bool, errFinal error) {
+	errFinal = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
+		exists = reader.Exists("blockHeight_ByHash" + string(hash)) //optimized
+		return nil
+	})
+	return
+}
+
+func (chain *Blockchain) OpenExistsAsset(hash []byte) (exists bool, errFinal error) {
+	errFinal = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
+		exists = reader.Exists("assets:exists:" + string(hash)) //optimized
 		return nil
 	})
 	return
@@ -157,6 +174,10 @@ func (chain *Blockchain) saveBlockComplete(writer store_db_interface.StoreDBTran
 		if removedTxHashes[tx.Bloom.HashStr] == nil {
 			writer.Put("tx:"+tx.Bloom.HashStr, tx.Bloom.Serialized)
 			writer.Put("txHash:"+tx.Bloom.HashStr, []byte{1})
+
+			buf := make([]byte, binary.MaxVarintLen64)
+			n := binary.PutUvarint(buf, blkComplete.Block.Height)
+			writer.Put("txBlock:"+tx.Bloom.HashStr, buf[:n])
 		} else {
 			delete(removedTxHashes, tx.Bloom.HashStr)
 		}
