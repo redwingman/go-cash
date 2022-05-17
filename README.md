@@ -14,6 +14,10 @@ Insigificant Distribution to Bootstrap the consensus of the network was done usi
 
 xiangwei
 
+# bootstrap file
+
+https://ufile.io/8dx3et3j block 23455
+
 # go-pandora-pay
 
 PandoraPay blockchain in go
