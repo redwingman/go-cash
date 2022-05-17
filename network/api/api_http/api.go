@@ -55,7 +55,6 @@ func handle[T any, B any](callback func(r *http.Request, args *T, reply *B) erro
 
 func handlePOSTAuthenticated[T any, B any](callback func(r *http.Request, args *T, reply *B, authenticated bool) error) func(values io.ReadCloser) (interface{}, error) {
 	return func(values io.ReadCloser) (interface{}, error) {
-		args := new(T)
 
 		authenticated := new(api_types.APIAuthenticated[T])
 		if err := json.NewDecoder(values).Decode(authenticated); err != nil {
@@ -63,7 +62,7 @@ func handlePOSTAuthenticated[T any, B any](callback func(r *http.Request, args *
 		}
 
 		reply := new(B)
-		return reply, callback(nil, args, reply, authenticated.CheckAuthenticated())
+		return reply, callback(nil, authenticated.Data, reply, authenticated.CheckAuthenticated())
 	}
 }
 
@@ -93,7 +92,9 @@ func NewAPI(apiStore *api_common.APIStore, apiCommon *api_common.APICommon, chai
 		"":                        handle[struct{}, api_common.APIInfoReply](api.apiCommon.GetInfo),
 		"chain":                   handle[struct{}, api_common.APIBlockchain](api.apiCommon.GetBlockchain),
 		"blockchain":              handle[struct{}, api_common.APIBlockchain](api.apiCommon.GetBlockchain),
-		"supply":                  handle[struct{}, api_common.APISupply](api.apiCommon.GetSupply),
+		"blockchain/staking-info": handle[api_common.APIStakingInfoRequest, api_common.APIStakingInfoReply](api.apiCommon.GetStakingInfo),
+		"blockchain/genesis-info": handle[api_common.APIGenesisInfoRequest, api_common.APIGenesisInfoReply](api.apiCommon.GetGenesisInfo),
+		"blockchain/supply":       handle[struct{}, api_common.APISupply](api.apiCommon.GetSupply),
 		"sync":                    handle[struct{}, blockchain_sync.BlockchainSyncData](api.apiCommon.GetBlockchainSync),
 		"block-hash":              handle[api_common.APIBlockHashRequest, api_common.APIBlockHashReply](api.apiCommon.GetBlockHash),
 		"block/exists":            handle[api_common.APIBlockExistsRequest, api_common.APIBlockExistsReply](api.apiCommon.GetBlockExists),
