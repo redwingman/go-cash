@@ -17,6 +17,7 @@ import (
 	"pandora-pay/gui"
 	"pandora-pay/mempool"
 	"pandora-pay/network/banned_nodes"
+	"pandora-pay/network/connected_nodes"
 	"pandora-pay/network/known_nodes"
 	"pandora-pay/network/server/node_http"
 	"pandora-pay/recovery"
@@ -37,7 +38,7 @@ type TcpServer struct {
 	HttpServer  *node_http.HttpServer
 }
 
-func NewTcpServer(bannedNodes *banned_nodes.BannedNodes, knownNodes *known_nodes.KnownNodes, settings *settings.Settings, chain *blockchain.Blockchain, mempool *mempool.Mempool, wallet *wallet.Wallet, txsValidator *txs_validator.TxsValidator, txsBuilder *txs_builder.TxsBuilder) (*TcpServer, error) {
+func NewTcpServer(connectedNodes *connected_nodes.ConnectedNodes, bannedNodes *banned_nodes.BannedNodes, knownNodes *known_nodes.KnownNodes, settings *settings.Settings, chain *blockchain.Blockchain, mempool *mempool.Mempool, wallet *wallet.Wallet, txsValidator *txs_validator.TxsValidator, txsBuilder *txs_builder.TxsBuilder) (*TcpServer, error) {
 
 	server := &TcpServer{}
 
@@ -82,9 +83,6 @@ func NewTcpServer(bannedNodes *banned_nodes.BannedNodes, knownNodes *known_nodes
 			}
 		}
 		server.Address = address
-		server.URL = &url.URL{Scheme: "ws", Host: address + ":" + port, Path: "/ws"}
-		config.NETWORK_ADDRESS_URL_STRING = server.URL.String()
-		bannedNodes.Ban(server.URL, "", "You can't connect to yourself", 10*365*24*time.Hour)
 	}
 
 	bannedNodes.Ban(&url.URL{Scheme: "ws", Host: "127.0.0.1:" + port, Path: "/ws"}, "", "You can't connect to yourself", 10*365*24*time.Hour)
@@ -134,6 +132,20 @@ func NewTcpServer(bannedNodes *banned_nodes.BannedNodes, knownNodes *known_nodes
 
 	}
 
+	if shareAddress {
+		websocketUrl := &url.URL{Scheme: "ws", Host: address + ":" + port, Path: "/ws"}
+		url := &url.URL{Scheme: "http", Host: address + ":" + port, Path: ""}
+		if tlsConfig != nil {
+			websocketUrl.Scheme += "s"
+			url.Scheme += "s"
+		}
+		config.NETWORK_ADDRESS_URL_STRING = url.String()
+		config.NETWORK_WEBSOCKET_ADDRESS_URL_STRING = websocketUrl.String()
+
+		bannedNodes.Ban(websocketUrl, "", "You can't connect to yourself", 10*365*24*time.Hour)
+		server.URL = url
+	}
+
 	if tlsConfig != nil {
 		if server.tcpListener, err = tls.Listen("tcp", ":"+port, tlsConfig); err != nil {
 			return nil, err
@@ -149,12 +161,12 @@ func NewTcpServer(bannedNodes *banned_nodes.BannedNodes, knownNodes *known_nodes
 
 	gui.GUI.InfoUpdate("TCP", address+":"+port)
 
-	if server.HttpServer, err = node_http.NewHttpServer(chain, settings, bannedNodes, knownNodes, mempool, wallet, txsValidator, txsBuilder); err != nil {
+	if server.HttpServer, err = node_http.NewHttpServer(chain, settings, connectedNodes, bannedNodes, knownNodes, mempool, wallet, txsValidator, txsBuilder); err != nil {
 		return nil, err
 	}
 
 	recovery.SafeGo(func() {
-		if err := http.Serve(server.tcpListener, nil); err != nil {
+		if err := http.Serve(server.tcpListener, *server.HttpServer.GetHttpHandler()); err != nil {
 			gui.GUI.Error("Error opening HTTP server", err)
 		}
 		gui.GUI.Info("HTTP server")

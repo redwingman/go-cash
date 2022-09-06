@@ -2,15 +2,19 @@ package start
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"os/signal"
 	"pandora-pay/address_balance_decryptor"
 	"pandora-pay/app"
 	"pandora-pay/blockchain"
 	"pandora-pay/blockchain/forging"
 	"pandora-pay/blockchain/genesis"
+	"pandora-pay/config"
+	"pandora-pay/config/arguments"
 	"pandora-pay/config/config_forging"
 	"pandora-pay/config/globals"
-	balance_decoder "pandora-pay/cryptography/crypto/balance-decryptor"
+	"pandora-pay/cryptography/crypto/balance_decryptor"
 	"pandora-pay/gui"
 	"pandora-pay/helpers/debugging_pprof"
 	"pandora-pay/mempool"
@@ -23,9 +27,10 @@ import (
 	"pandora-pay/wallet"
 	"runtime"
 	"strconv"
+	"syscall"
 )
 
-func _startMain() (err error) {
+func StartMainNow() (err error) {
 
 	if globals.MainStarted {
 		return
@@ -53,7 +58,7 @@ func _startMain() (err error) {
 	}
 	globals.MainEvents.BroadcastEvent("main", "txs validator initialized")
 
-	if app.AddressBalanceDecryptor, err = address_balance_decryptor.NewAddressBalanceDecryptor(); err != nil {
+	if app.AddressBalanceDecryptor, err = address_balance_decryptor.NewAddressBalanceDecryptor(runtime.GOARCH != "wasm"); err != nil {
 		return
 	}
 	globals.MainEvents.BroadcastEvent("main", "address balance decryptor validator initialized")
@@ -100,7 +105,7 @@ func _startMain() (err error) {
 		go func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			balance_decoder.BalanceDecryptor.SetTableSize(tableSize, ctx, func(string) {})
+			balance_decryptor.BalanceDecryptor.SetTableSize(tableSize, ctx, func(string) {})
 		}()
 	}
 
@@ -146,10 +151,28 @@ func _startMain() (err error) {
 	return
 }
 
-func startMain() {
+func InitMain(ready func()) {
+	var err error
 
-	if err := _startMain(); err != nil {
-		gui.GUI.Error(err)
+	argv := os.Args[1:]
+	if err = arguments.InitArguments(argv); err != nil {
+		saveError(err)
 	}
 
+	if err = config.InitConfig(); err != nil {
+		saveError(err)
+	}
+	globals.MainEvents.BroadcastEvent("main", "config initialized")
+
+	startMain()
+
+	if ready != nil {
+		ready()
+	}
+
+	exitSignal := make(chan os.Signal, 10)
+	signal.Notify(exitSignal, syscall.SIGINT, syscall.SIGTERM)
+	<-exitSignal
+
+	fmt.Println("Shutting down")
 }
