@@ -4,14 +4,23 @@ import (
 	"pandora-pay/blockchain/data_storage/plain_accounts/plain_account/asset_fee_liquidity"
 )
 
+type WizardTxSimpleExtra interface {
+}
+
 type WizardTxSimpleExtraUpdateAssetFeeLiquidity struct {
 	WizardTxSimpleExtra `json:"-"  msgpack:"-"`
 	Liquidities         []*asset_fee_liquidity.AssetFeeLiquidity `json:"liquidities"  msgpack:"liquidities"`
-	CollectorHasNew     bool                                     `json:"collectorHasNew"  msgpack:"collectorHasNew"`
+	NewCollector        bool                                     `json:"newCollector"  msgpack:"newCollector"`
 	Collector           []byte                                   `json:"collector"  msgpack:"collector"`
 }
 
-type WizardTxSimpleExtra interface {
+type WizardTxSimpleExtraResolutionConditionalPayment struct {
+	WizardTxSimpleExtra `json:"-"  msgpack:"-"`
+	TxId                []byte   `json:"txId" msgpack:"txId"`
+	PayloadIndex        byte     `json:"payloadIndex" msgpack:"payloadIndex"`
+	Resolution          bool     `json:"resolution" msgpack:"resolution"`
+	MultisigPublicKeys  [][]byte `json:"multisigPublicKeys" msgpack:"multisigPublicKeys"`
+	Signatures          [][]byte `json:"signatures" msgpack:"signatures"`
 }
 
 type WizardTxSimpleTransfer struct {

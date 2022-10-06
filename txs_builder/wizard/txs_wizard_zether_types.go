@@ -35,6 +35,14 @@ type WizardZetherPayloadExtraPlainAccountFund struct {
 	PlainAccountPublicKey    []byte `json:"plainAccountPublicKey" msgpack:"plainAccountPublicKey"`
 }
 
+type WizardZetherPayloadExtraConditionalPayment struct {
+	WizardZetherPayloadExtra `json:"-" msgpack:""`
+	Deadline                 uint64   `json:"deadline" msgpack:"deadline"`
+	DefaultResolution        bool     `json:"defaultResolution" msgpack:"defaultResolution"`
+	Threshold                byte     `json:"threshold" msgpack:"threshold"`
+	MultisigPublicKeys       [][]byte `json:"multisigPublicKeys" msgpack:"multisigPublicKeys"`
+}
+
 type WizardZetherPayloadExtra interface {
 }
 

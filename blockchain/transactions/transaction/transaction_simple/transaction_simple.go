@@ -29,32 +29,38 @@ type TransactionSimple struct {
 func (tx *TransactionSimple) IncludeTransaction(blockHeight uint64, txHash []byte, dataStorage *data_storage.DataStorage) (err error) {
 
 	var plainAcc *plain_account.PlainAccount
-	if plainAcc, err = dataStorage.PlainAccs.GetPlainAccount(tx.Vin.PublicKey); err != nil {
-		return
-	}
-	if plainAcc == nil {
-		return errors.New("Plain Account was not found")
+
+	if tx.HasVin() {
+		if plainAcc, err = dataStorage.PlainAccs.Get(string(tx.Vin.PublicKey)); err != nil {
+			return
+		}
+		if plainAcc == nil {
+			return errors.New("Plain Account was not found")
+		}
+
+		if plainAcc.Nonce != tx.Nonce {
+			return fmt.Errorf("Account nonce doesn't match %d %d", plainAcc.Nonce, tx.Nonce)
+		}
+		if err = plainAcc.IncrementNonce(true); err != nil {
+			return
+		}
+
+		if err = dataStorage.SubtractUnclaimed(plainAcc, tx.Fee, blockHeight); err != nil {
+			return errors.New("Not enought Unclaimed funds to substract Tx.Fee")
+		}
 	}
 
-	if plainAcc.Nonce != tx.Nonce {
-		return fmt.Errorf("Account nonce doesn't match %d %d", plainAcc.Nonce, tx.Nonce)
-	}
-	if err = plainAcc.IncrementNonce(true); err != nil {
-		return
-	}
-
-	if err = dataStorage.SubtractUnclaimed(plainAcc, tx.Fee, blockHeight); err != nil {
-		return errors.New("Not enought Unclaimed funds to substract Tx.Fee")
-	}
-
-	switch tx.TxScript {
-	case SCRIPT_UPDATE_ASSET_FEE_LIQUIDITY:
+	if tx.Extra != nil {
 		if err = tx.Extra.IncludeTransactionVin0(blockHeight, plainAcc, dataStorage); err != nil {
 			return
 		}
 	}
 
-	return dataStorage.PlainAccs.Update(string(tx.Vin.PublicKey), plainAcc)
+	if tx.HasVin() {
+		return dataStorage.PlainAccs.Update(string(tx.Vin.PublicKey), plainAcc)
+	}
+
+	return nil
 }
 
 func (tx *TransactionSimple) ComputeFee() (uint64, error) {
@@ -62,26 +68,44 @@ func (tx *TransactionSimple) ComputeFee() (uint64, error) {
 }
 
 func (tx *TransactionSimple) ComputeAllKeys(out map[string]bool) {
-	out[string(tx.Vin.PublicKey)] = true
+
+	if tx.HasVin() {
+		out[string(tx.Vin.PublicKey)] = true
+	}
+
 	return
 }
 
 func (tx *TransactionSimple) VerifySignatureManually(hashForSignature []byte) bool {
-	return crypto.VerifySignature(hashForSignature, tx.Vin.Signature, tx.Vin.PublicKey)
+	if tx.HasVin() {
+		if !crypto.VerifySignature(hashForSignature, tx.Vin.Signature, tx.Vin.PublicKey) {
+			return false
+		}
+	}
+	if tx.TxScript == SCRIPT_RESOLUTION_CONDITIONAL_PAYMENT {
+		extra := tx.Extra.(*transaction_simple_extra.TransactionSimpleExtraResolutionConditionalPayment)
+		if !extra.VerifySignature() {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (tx *TransactionSimple) Validate() (err error) {
 
-	if err = tx.Vin.Validate(); err != nil {
-		return
+	if tx.HasVin() {
+		if err = tx.Vin.Validate(); err != nil {
+			return
+		}
 	}
 
 	switch tx.TxScript {
-	case SCRIPT_UPDATE_ASSET_FEE_LIQUIDITY:
+	case SCRIPT_UPDATE_ASSET_FEE_LIQUIDITY, SCRIPT_RESOLUTION_CONDITIONAL_PAYMENT:
 		if tx.Extra == nil {
 			return errors.New("extra is not assigned")
 		}
-		if err = tx.Extra.Validate(); err != nil {
+		if err = tx.Extra.Validate(tx.Fee); err != nil {
 			return
 		}
 	default:
@@ -100,10 +124,11 @@ func (tx *TransactionSimple) SerializeAdvanced(w *helpers.BufferWriter, inclSign
 		w.WriteVariableBytes(tx.Data)
 	}
 
-	w.WriteUvarint(tx.Nonce)
-	w.WriteUvarint(tx.Fee)
-
-	tx.Vin.Serialize(w, inclSignature)
+	if tx.HasVin() {
+		w.WriteUvarint(tx.Nonce)
+		w.WriteUvarint(tx.Fee)
+		tx.Vin.Serialize(w, inclSignature)
+	}
 
 	if tx.Extra != nil {
 		tx.Extra.Serialize(w, inclSignature)
@@ -125,6 +150,8 @@ func (tx *TransactionSimple) Deserialize(r *helpers.BufferReader) (err error) {
 	switch tx.TxScript {
 	case SCRIPT_UPDATE_ASSET_FEE_LIQUIDITY:
 		tx.Extra = &transaction_simple_extra.TransactionSimpleExtraUpdateAssetFeeLiquidity{}
+	case SCRIPT_RESOLUTION_CONDITIONAL_PAYMENT:
+		tx.Extra = &transaction_simple_extra.TransactionSimpleExtraResolutionConditionalPayment{}
 	default:
 		return errors.New("INVALID SCRIPT TYPE")
 	}
@@ -145,17 +172,17 @@ func (tx *TransactionSimple) Deserialize(r *helpers.BufferReader) (err error) {
 		return errors.New("Invalid Tx.DataVersion")
 	}
 
-	if tx.Nonce, err = r.ReadUvarint(); err != nil {
-		return
-	}
-
-	if tx.Fee, err = r.ReadUvarint(); err != nil {
-		return
-	}
-
-	tx.Vin = &transaction_simple_parts.TransactionSimpleInput{}
-	if err = tx.Vin.Deserialize(r); err != nil {
-		return
+	if tx.HasVin() {
+		if tx.Nonce, err = r.ReadUvarint(); err != nil {
+			return
+		}
+		if tx.Fee, err = r.ReadUvarint(); err != nil {
+			return
+		}
+		tx.Vin = &transaction_simple_parts.TransactionSimpleInput{}
+		if err = tx.Vin.Deserialize(r); err != nil {
+			return
+		}
 	}
 
 	if tx.Extra != nil {
@@ -163,6 +190,15 @@ func (tx *TransactionSimple) Deserialize(r *helpers.BufferReader) (err error) {
 	}
 
 	return
+}
+
+func (tx *TransactionSimple) HasVin() bool {
+	switch tx.TxScript {
+	case SCRIPT_UPDATE_ASSET_FEE_LIQUIDITY:
+		return true
+	default:
+		return false
+	}
 }
 
 func (tx *TransactionSimple) VerifyBloomAll() error {

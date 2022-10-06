@@ -8,11 +8,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"pandora-pay/addresses"
 	"pandora-pay/blockchain/data_storage/assets"
 	"pandora-pay/blockchain/data_storage/assets/asset"
 	"pandora-pay/blockchain/data_storage/plain_accounts/plain_account/asset_fee_liquidity"
+	"pandora-pay/blockchain/transactions/transaction/transaction_simple/transaction_simple_extra"
 	"pandora-pay/blockchain/transactions/transaction/transaction_zether"
 	"pandora-pay/blockchain/transactions/transaction/transaction_zether/transaction_zether_payload/transaction_zether_payload_extra"
 	"pandora-pay/config/config_assets"
@@ -20,6 +20,7 @@ import (
 	"pandora-pay/cryptography"
 	"pandora-pay/gui"
 	"pandora-pay/helpers"
+	"pandora-pay/helpers/files"
 	"pandora-pay/store"
 	"pandora-pay/store/store_db/store_db_interface"
 	"pandora-pay/txs_builder/wizard"
@@ -49,7 +50,7 @@ func (builder *TxsBuilder) readAmount(assetId []byte, text string) (amount uint6
 	err = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
 		asts := assets.NewAssets(reader)
 		var ast *asset.Asset
-		if ast, err = asts.GetAsset(assetId); err != nil {
+		if ast, err = asts.Get(string(assetId)); err != nil {
 			return
 		}
 		if ast == nil {
@@ -97,8 +98,7 @@ func (builder *TxsBuilder) readAddressOptional(text string, assetId []byte, allo
 			return
 		}
 
-		address, err = addresses.DecodeAddr(str)
-		if err != nil {
+		if address, err = addresses.DecodeAddr(str); err != nil {
 			gui.GUI.OutputWrite("Invalid Address")
 			continue
 		}
@@ -280,28 +280,18 @@ func (builder *TxsBuilder) initCLI() {
 
 		if updatePrivKey != nil || supplyPrivKey != nil {
 
-			filename := gui.GUI.OutputReadFilename("Path to export Asset Private Keys", "keys")
-
-			var f *os.File
-			if f, err = os.Create(filename); err != nil {
-				return
-			}
-			defer f.Close()
-
-			if _, err = fmt.Fprintln(f, "Asset ID:", base64.StdEncoding.EncodeToString(assetId)); err != nil {
-				return
-			}
-			if _, err = fmt.Fprintln(f, "Asset name:", extra.Asset.Name, extra.Asset.Ticker); err != nil {
-				return
-			}
-			if _, err = fmt.Fprintln(f, "Supply Private Key:", base64.StdEncoding.EncodeToString(supplyPrivKey.Key)); err != nil {
-				return
-			}
-			if _, err = fmt.Fprintln(f, "Update Private Key:", base64.StdEncoding.EncodeToString(updatePrivKey.Key)); err != nil {
-				return
+			if filename := gui.GUI.OutputReadFilename("Path to export Asset Private Keys", "keys", true); len(filename) > 0 {
+				if err = files.WriteFile(filename,
+					fmt.Sprintf("Asset ID: %s", base64.StdEncoding.EncodeToString(assetId)),
+					fmt.Sprintf("Asset name: %s", extra.Asset.Name, extra.Asset.Ticker),
+					fmt.Sprintf("Supply Private Key: %s", base64.StdEncoding.EncodeToString(supplyPrivKey.Key)),
+					fmt.Sprintf("Update Private Key: %s", base64.StdEncoding.EncodeToString(updatePrivKey.Key)),
+				); err != nil {
+					return
+				}
+				gui.GUI.OutputWrite("Asset Keys Exported successfully to: ", filename)
 			}
 
-			gui.GUI.Info("Asset Keys Exported successfully to: ", filename)
 		}
 
 		return
@@ -399,6 +389,89 @@ func (builder *TxsBuilder) initCLI() {
 		return
 	}
 
+	cliPrivateConditionalPayment := func(cmd string, ctx context.Context) (err error) {
+		builder.showWarningIfNotSyncCLI()
+
+		extra := &wizard.WizardZetherPayloadExtraConditionalPayment{}
+		txData := &TxBuilderCreateZetherTxData{
+			Payloads: []*TxBuilderCreateZetherTxPayload{{
+				Extra: extra,
+			}, {}},
+		}
+
+		if _, txData.Payloads[0].Sender, _, err = builder.wallet.CliSelectAddress("Select Address to Transfer", ctx); err != nil {
+			return
+		}
+		txData.Payloads[1].Sender = txData.Payloads[0].Sender
+
+		txData.Payloads[0].Asset = builder.readAsset("Asset. Leave empty for Native Asset", true)
+		txData.Payloads[1].Asset = txData.Payloads[0].Asset
+
+		if _, txData.Payloads[0].Recipient, txData.Payloads[0].Amount, err = builder.readAddressOptional("Recipient Address", txData.Payloads[0].Asset, false); err != nil {
+			return
+		}
+
+		extra.Deadline = gui.GUI.OutputReadUint64("Deadline", true, 10, func(val uint64) bool {
+			return val >= 10 && val <= 100000
+		})
+
+		extra.DefaultResolution = gui.GUI.OutputReadBool("Default Resolution: y - reciever, n - sender", false, false)
+
+		extra.Threshold = byte(gui.GUI.OutputReadUint64("Threshold", true, 1, func(val uint64) bool {
+			return val >= 1 && val <= 5
+		}))
+
+		extra.MultisigPublicKeys = [][]byte{}
+		unique := make(map[string]bool)
+		for {
+			pubKey := gui.GUI.OutputReadBytes(fmt.Sprintf("PublicKey %d used in multisig payment", len(extra.MultisigPublicKeys)), func(val []byte) bool {
+				return len(val) == 0 || len(val) == cryptography.PublicKeySize
+			})
+			if len(pubKey) == 0 {
+				break
+			}
+			if unique[string(pubKey)] {
+				gui.GUI.OutputWrite("PublicKey already include")
+				continue
+			}
+			extra.MultisigPublicKeys = append(extra.MultisigPublicKeys, pubKey)
+		}
+
+		if _, txData.Payloads[1].Recipient, txData.Payloads[1].Amount, err = builder.readAddressOptional("Transfer Address (optional)", config_coins.NATIVE_ASSET_FULL, true); err != nil {
+			return
+		}
+
+		txData.Payloads[0].RingConfiguration = builder.readZetherRingConfiguration()
+		if err = builder.presetZetherRing(txData.Payloads[0].RingConfiguration); err != nil {
+			return err
+		}
+
+		txData.Payloads[0].RingConfiguration.SenderRingType.AvoidStakedAccounts = true
+		txData.Payloads[0].RingConfiguration.RecipientRingType.AvoidStakedAccounts = true
+
+		txData.Payloads[1].RingConfiguration = &ZetherRingConfiguration{
+			txData.Payloads[0].RingConfiguration.RingSize,
+			&ZetherSenderRingType{false, true, []string{}, 0},
+			&ZetherRecipientRingType{false, true, []string{}, txData.Payloads[0].RingConfiguration.RecipientRingType.NewAccounts},
+		}
+
+		txData.Payloads[0].Data = builder.readData()
+
+		txData.Payloads[0].Fee = builder.readZetherFee(txData.Payloads[0].Asset)
+		txData.Payloads[1].Fee = txData.Payloads[0].Fee
+		propagate := gui.GUI.OutputReadBool("Propagate? y/n. Leave empty for yes", true, true)
+
+		tx, err := builder.CreateZetherTx(txData, nil, propagate, true, true, false, ctx, func(status string) {
+			gui.GUI.OutputWrite(status)
+		})
+		if err != nil {
+			return
+		}
+
+		gui.GUI.OutputWrite(fmt.Sprintf("Tx created: %s %s", base64.StdEncoding.EncodeToString(tx.Bloom.Hash), cmd))
+		return
+	}
+
 	cliUpdateAssetFeeLiquidity := func(cmd string, ctx context.Context) (err error) {
 
 		builder.showWarningIfNotSyncCLI()
@@ -409,7 +482,7 @@ func (builder *TxsBuilder) initCLI() {
 			FeeVersion: true,
 		}
 
-		if _, txData.Sender, _, err = builder.wallet.CliSelectAddress("Select Address to Update Asset Fee Liquidity", ctx); err != nil {
+		if _, txData.Sender, _, err = builder.wallet.CliSelectAddress("Select Address to Publicly Update Asset Fee Liquidity", ctx); err != nil {
 			return
 		}
 
@@ -418,7 +491,7 @@ func (builder *TxsBuilder) initCLI() {
 			return
 		}
 		if addr != nil {
-			txExtra.CollectorHasNew = true
+			txExtra.NewCollector = true
 			txExtra.Collector = addr.PublicKey
 		}
 
@@ -453,10 +526,84 @@ func (builder *TxsBuilder) initCLI() {
 		return
 	}
 
+	cliResolutionConditionalPayment := func(cmd string, ctx context.Context) (err error) {
+
+		builder.showWarningIfNotSyncCLI()
+
+		txExtra := &wizard.WizardTxSimpleExtraResolutionConditionalPayment{
+			MultisigPublicKeys: make([][]byte, 0),
+			Signatures:         make([][]byte, 0),
+		}
+		txData := &TxBuilderCreateSimpleTx{
+			Extra:      txExtra,
+			Fee:        &wizard.WizardTransactionFee{0, 0, 0, false},
+			FeeVersion: true,
+		}
+
+		txExtra.TxId = gui.GUI.OutputReadBytes("Provide TxId", func(val []byte) bool {
+			return len(val) == cryptography.HashSize
+		})
+
+		txExtra.PayloadIndex = byte(gui.GUI.OutputReadInt("Payload index", false, 0, func(val int) bool {
+			return val >= 0 && val < 255
+		}))
+
+		txExtra.Resolution = gui.GUI.OutputReadBool("Resolution.  Use y/n for voting", false, false)
+
+		i := 0
+		for {
+			key := gui.GUI.OutputReadBytes(fmt.Sprintf("Public Key %d. Use enter to continue", i), func(key []byte) bool {
+				return len(key) == cryptography.PublicKeySize || len(key) == 0
+			})
+			if len(key) == 0 {
+				break
+			}
+
+			signature := gui.GUI.OutputReadBytes("Signature", func(sign []byte) bool {
+				return len(sign) == cryptography.SignatureSize
+			})
+
+			extra := &transaction_simple_extra.TransactionSimpleExtraResolutionConditionalPayment{nil,
+				txExtra.TxId,
+				txExtra.PayloadIndex,
+				txExtra.Resolution,
+				[][]byte{key},
+				[][]byte{signature},
+			}
+
+			if !extra.VerifySignature() {
+				gui.GUI.Error("provided resolution signature is not valid")
+				break
+			}
+
+			txExtra.MultisigPublicKeys = append(txExtra.MultisigPublicKeys, key)
+			txExtra.Signatures = append(txExtra.Signatures, signature)
+
+			i++
+		}
+
+		txData.Nonce = 0
+		txData.Data = builder.readData()
+
+		propagate := gui.GUI.OutputReadBool("Propagate? y/n. Leave empty for yes", true, true)
+
+		tx, err := builder.CreateSimpleTx(txData, propagate, true, true, false, ctx, func(status string) {
+			gui.GUI.OutputWrite(status)
+		})
+		if err != nil {
+			return
+		}
+
+		gui.GUI.OutputWrite(fmt.Sprintf("Tx created: %s %s", base64.StdEncoding.EncodeToString(tx.Bloom.Hash), cmd))
+		return
+	}
+
 	gui.GUI.CommandDefineCallback("Private Transfer", cliPrivateTransfer, true)
 	gui.GUI.CommandDefineCallback("Private Asset Create", cliPrivateAssetCreate, true)
 	gui.GUI.CommandDefineCallback("Private Asset Supply Increase", cliPrivateAssetSupplyIncrease, true)
 	gui.GUI.CommandDefineCallback("Private Plain Account Fund", cliPrivatePlainAccountFund, true)
-	gui.GUI.CommandDefineCallback("Update Asset Fee Liquidity", cliUpdateAssetFeeLiquidity, true)
+	gui.GUI.CommandDefineCallback("Private Conditional Payment", cliPrivateConditionalPayment, true)
+	gui.GUI.CommandDefineCallback("Public Update Asset Fee Liquidity", cliUpdateAssetFeeLiquidity, true)
+	gui.GUI.CommandDefineCallback("Public Resolution Conditional Payment", cliResolutionConditionalPayment, true)
 
 }

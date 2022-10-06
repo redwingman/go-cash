@@ -82,6 +82,10 @@ func Initialize() {
 			"RIPEMD_SIZE":          js.ValueOf(cryptography.RipemdSize),
 			"PUBLIC_KEY_HASH_SIZE": js.ValueOf(cryptography.PublicKeyHashSize),
 			"CHECK_SUM_SIZE":       js.ValueOf(cryptography.ChecksumSize),
+			"sha3":                 js.FuncOf(sha3),
+			"ripemd":               js.FuncOf(ripemd),
+			"sign":                 js.FuncOf(sign),
+			"verify":               js.FuncOf(verify),
 		}),
 		"network": js.ValueOf(map[string]interface{}{
 			"networkDisconnect":                      js.FuncOf(networkDisconnect),
@@ -113,6 +117,7 @@ func Initialize() {
 			"builder": js.ValueOf(map[string]interface{}{
 				"createSimpleTx": js.FuncOf(createSimpleTx),
 			}),
+			"signResolutionConditionalPayment": js.FuncOf(signResolutionConditionalPayment),
 		}),
 		"mempool": js.ValueOf(map[string]interface{}{
 			"mempoolRemoveTx": js.FuncOf(mempoolRemoveTx),
@@ -131,7 +136,8 @@ func Initialize() {
 				}),
 				"transactionSimple": js.ValueOf(map[string]interface{}{
 					"ScriptType": js.ValueOf(map[string]interface{}{
-						"SCRIPT_UPDATE_ASSET_FEE_LIQUIDITY": js.ValueOf(uint64(transaction_simple.SCRIPT_UPDATE_ASSET_FEE_LIQUIDITY)),
+						"SCRIPT_UPDATE_ASSET_FEE_LIQUIDITY":     js.ValueOf(uint64(transaction_simple.SCRIPT_UPDATE_ASSET_FEE_LIQUIDITY)),
+						"SCRIPT_RESOLUTION_CONDITIONAL_PAYMENT": js.ValueOf(uint64(transaction_simple.SCRIPT_RESOLUTION_CONDITIONAL_PAYMENT)),
 					}),
 				}),
 				"transactionZether": js.ValueOf(map[string]interface{}{
@@ -143,6 +149,7 @@ func Initialize() {
 						"SCRIPT_ASSET_CREATE":          js.ValueOf(uint64(transaction_zether_payload_script.SCRIPT_ASSET_CREATE)),
 						"SCRIPT_ASSET_SUPPLY_INCREASE": js.ValueOf(uint64(transaction_zether_payload_script.SCRIPT_ASSET_SUPPLY_INCREASE)),
 						"SCRIPT_PLAIN_ACCOUNT_FUND":    js.ValueOf(uint64(transaction_zether_payload_script.SCRIPT_PLAIN_ACCOUNT_FUND)),
+						"SCRIPT_CONDITIONAL_PAYMENT":   js.ValueOf(uint64(transaction_zether_payload_script.SCRIPT_CONDITIONAL_PAYMENT)),
 					}),
 				}),
 			}),
@@ -187,6 +194,9 @@ func Initialize() {
 			"CONSENSUS":               js.ValueOf(uint8(config.CONSENSUS)),
 			"VERSION":                 js.ValueOf(config.VERSION_STRING),
 			"BUILD_VERSION":           js.ValueOf(config.BUILD_VERSION),
+			"BLOCK_TIME":              js.ValueOf(config.BLOCK_TIME),
+			"BLOCK_MAX_SIZE":          js.ValueOf(config.BLOCK_MAX_SIZE),
+			"DIFFICULTY_BLOCK_WINDOW": js.ValueOf(config.DIFFICULTY_BLOCK_WINDOW),
 			"coins": js.ValueOf(map[string]interface{}{
 				"DECIMAL_SEPARATOR":               js.ValueOf(config_coins.DECIMAL_SEPARATOR),
 				"COIN_DENOMINATION":               js.ValueOf(config_coins.COIN_DENOMINATION),

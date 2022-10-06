@@ -10,7 +10,6 @@ import (
 	"pandora-pay/network/websocks/connection"
 	"pandora-pay/network/websocks/connection/advanced_connection_types"
 	"pandora-pay/recovery"
-	"pandora-pay/store/hash_map"
 )
 
 type WebsocketSubscriptions struct {
@@ -60,7 +59,7 @@ func (this *WebsocketSubscriptions) send(subscriptionType api_types.Subscription
 	for _, subNot := range list {
 
 		if element == nil && elementBytes == nil && extra == nil {
-			_ = subNot.Conn.Send(key, nil, nil, 0)
+			_ = subNot.Conn.Send(key, nil, 0)
 			continue
 		}
 
@@ -75,7 +74,7 @@ func (this *WebsocketSubscriptions) send(subscriptionType api_types.Subscription
 			if serialized == nil {
 				serialized = &api_types.APISubscriptionNotification{subscriptionType, key, bytes, extraMarshalled}
 			}
-			_ = subNot.Conn.SendJSON(apiRoute, serialized, nil, 0)
+			_ = subNot.Conn.SendJSON(apiRoute, serialized, 0)
 		} else if subNot.Subscription.ReturnType == api_types.RETURN_JSON {
 			if marshalled == nil {
 				var bytes []byte
@@ -88,7 +87,7 @@ func (this *WebsocketSubscriptions) send(subscriptionType api_types.Subscription
 				}
 				marshalled = &api_types.APISubscriptionNotification{subscriptionType, key, bytes, extraMarshalled}
 			}
-			_ = subNot.Conn.SendJSON(apiRoute, marshalled, nil, 0)
+			_ = subNot.Conn.SendJSON(apiRoute, marshalled, 0)
 		}
 
 	}
@@ -124,13 +123,6 @@ func (this *WebsocketSubscriptions) removeConnection(conn *connection.AdvancedCo
 	for _, key := range deleted {
 		delete(subsMap, key)
 	}
-}
-
-func (this *WebsocketSubscriptions) getElementIndex(element hash_map.HashMapElementSerializableInterface) uint64 {
-	if element != nil {
-		return element.GetIndex()
-	}
-	return 0
 }
 
 func (this *WebsocketSubscriptions) processSubscriptions() {
@@ -183,9 +175,14 @@ func (this *WebsocketSubscriptions) processSubscriptions() {
 				for k, v := range accs.HashMap.Committed {
 					if list := this.accountsSubscriptions[k]; list != nil {
 
+						var index uint64
+						if v.Element != nil {
+							index = v.Element.GetIndex()
+						}
+
 						this.send(api_types.SUBSCRIPTION_ACCOUNT, []byte("sub/notify"), []byte(k), list, v.Element, nil, &api_types.APISubscriptionNotificationAccountExtra{
 							accs.Asset,
-							this.getElementIndex(v.Element),
+							index,
 						})
 					}
 				}
@@ -194,8 +191,13 @@ func (this *WebsocketSubscriptions) processSubscriptions() {
 			for k, v := range dataStorage.PlainAccs.HashMap.Committed {
 				if list := this.accountsSubscriptions[k]; list != nil {
 
+					var index uint64
+					if v.Element != nil {
+						index = v.Element.GetIndex()
+					}
+
 					this.send(api_types.SUBSCRIPTION_PLAIN_ACCOUNT, []byte("sub/notify"), []byte(k), list, v.Element, nil, &api_types.APISubscriptionNotificationPlainAccExtra{
-						this.getElementIndex(v.Element),
+						index,
 					})
 				}
 			}
@@ -203,8 +205,13 @@ func (this *WebsocketSubscriptions) processSubscriptions() {
 			for k, v := range dataStorage.Asts.HashMap.Committed {
 				if list := this.assetsSubscriptions[k]; list != nil {
 
+					var index uint64
+					if v.Element != nil {
+						index = v.Element.GetIndex()
+					}
+
 					this.send(api_types.SUBSCRIPTION_ASSET, []byte("sub/notify"), []byte(k), list, v.Element, nil, &api_types.APISubscriptionNotificationAssetExtra{
-						this.getElementIndex(v.Element),
+						index,
 					})
 				}
 			}
@@ -212,8 +219,13 @@ func (this *WebsocketSubscriptions) processSubscriptions() {
 			for k, v := range dataStorage.Regs.HashMap.Committed {
 				if list := this.accountsSubscriptions[k]; list != nil {
 
+					var index uint64
+					if v.Element != nil {
+						index = v.Element.GetIndex()
+					}
+
 					this.send(api_types.SUBSCRIPTION_REGISTRATION, []byte("sub/notify"), []byte(k), list, v.Element, nil, &api_types.APISubscriptionNotificationRegistrationExtra{
-						this.getElementIndex(v.Element),
+						index,
 					})
 				}
 			}
