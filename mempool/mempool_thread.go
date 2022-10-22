@@ -197,10 +197,13 @@ func (worker *mempoolWorker) processing(
 					case data := <-insertTransactionsCn:
 						insertTxs(data)
 					case newAddTx = <-addTransactionCn:
-						tx = newAddTx.Tx
-						if txsMap[tx.Tx.Bloom.HashStr] != nil {
-							tx = nil
+						if txsMap[newAddTx.Tx.Tx.Bloom.HashStr] != nil {
+							if newAddTx.Result != nil {
+								newAddTx.Result <- nil //no error, already included in mempool
+							}
+							continue
 						}
+						tx = newAddTx.Tx
 					}
 				} else {
 					select {
@@ -221,9 +224,6 @@ func (worker *mempoolWorker) processing(
 				}
 
 				if tx == nil {
-					if newAddTx != nil && newAddTx.Result != nil {
-						newAddTx.Result <- errors.New("Already found")
-					}
 					continue
 				}
 
