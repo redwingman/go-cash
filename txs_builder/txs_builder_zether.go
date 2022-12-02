@@ -678,7 +678,7 @@ func (builder *TxsBuilderType) CreateForgingTransactions(blkComplete *block_comp
 				txs_builder_zether_helper.TxsBuilderZetherTxPayloadBase{
 					forger.EncodeAddr(),
 					"",
-					64,
+					128,
 					nil,
 				},
 				config_coins.NATIVE_ASSET_FULL,
@@ -686,7 +686,6 @@ func (builder *TxsBuilderType) CreateForgingTransactions(blkComplete *block_comp
 				decryptedBalance,
 				&ZetherRingConfiguration{&ZetherSenderRingType{true, false, nil, 0}, &ZetherRecipientRingType{true, false, nil, 0}},
 				blkComplete.StakingAmount,
-				&ZetherRingConfiguration{128, &ZetherSenderRingType{true, false, nil, 0}, &ZetherRecipientRingType{true, false, nil, 0}},
 				nil,
 				&wizard.WizardZetherTransactionFee{&wizard.WizardTransactionFee{0, 0, 0, false}, false, 0, 0},
 				&wizard.WizardZetherPayloadExtraStaking{},
@@ -695,7 +694,7 @@ func (builder *TxsBuilderType) CreateForgingTransactions(blkComplete *block_comp
 				txs_builder_zether_helper.TxsBuilderZetherTxPayloadBase{
 					"",
 					forger.EncodeAddr(),
-					64,
+					128,
 					nil,
 				},
 				config_coins.NATIVE_ASSET_FULL,
@@ -703,7 +702,6 @@ func (builder *TxsBuilderType) CreateForgingTransactions(blkComplete *block_comp
 				finalForgerReward, //reward will be the encrypted Balance
 				&ZetherRingConfiguration{&ZetherSenderRingType{true, false, nil, 0}, &ZetherRecipientRingType{true, false, nil, 0}},
 				0,
-				&ZetherRingConfiguration{128, &ZetherSenderRingType{true, false, nil, 0}, &ZetherRecipientRingType{true, false, nil, 0}},
 				nil,
 				&wizard.WizardZetherTransactionFee{&wizard.WizardTransactionFee{0, 0, 0, false}, false, 0, 0},
 				&wizard.WizardZetherPayloadExtraStakingReward{nil, finalForgerReward},
