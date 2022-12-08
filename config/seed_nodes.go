@@ -7,49 +7,46 @@ type SeedNode struct {
 var (
 	MAIN_NET_SEED_NODES = []*SeedNode{
 		{
-			"wss://pandoraseed1.mooo.com:8080/ws",
+			"wss://seed.pandoracash.com:2052/ws",
 		},
 		{
-			"wss://pandoraseed1.mooo.com:8081/ws",
+			"wss://seed.pandoracash.com:2087/ws",
 		},
 		{
-			"wss://pandoraseed1.mooo.com:8082/ws",
+			"wss://seed.pandoracash.com:2096/ws",
 		},
 		{
-			"wss://pandoraseed1.mooo.com:8083/ws",
-		},
-		{
-			"wss://pandoraseed1.mooo.com:8084/ws",
+			"wss://seed.pandoracash.com:8443/ws",
 		},
 	}
 
 	TEST_NET_SEED_NODES = []*SeedNode{
 		{
-			"ws://seed.testnet.pandoracash.com:5100/ws",
+			"wss://seed.testnet.pandoracash.com:2052/ws",
 		},
 		{
-			"ws://seed.testnet.pandoracash.com:5101/ws",
+			"wss://seed.testnet.pandoracash.com:2087/ws",
 		},
 		{
-			"ws://seed.testnet.pandoracash.com:5102/ws",
+			"wss://seed.testnet.pandoracash.com:2096/ws",
 		},
 		{
-			"ws://seed.testnet.pandoracash.com:5100/ws",
+			"wss://seed.testnet.pandoracash.com:8443/ws",
 		},
 	}
 
 	DEV_NET_SEED_NODES = []*SeedNode{
 		{
-			"ws://seed.devnet.pandoracash.com:6100/ws",
+			"wss://seed.devnet.pandoracash.com:2052/ws",
 		},
 		{
-			"ws://seed.devnet.pandoracash.com:6101/ws",
+			"wss://seed.devnet.pandoracash.com:2087/ws",
 		},
 		{
-			"ws://seed.devnet.pandoracash.com:6102/ws",
+			"wss://seed.devnet.pandoracash.com:2096/ws",
 		},
 		{
-			"ws://seed.devnet.pandoracash.com:6100/ws",
+			"wss://seed.devnet.pandoracash.com:8443/ws",
 		},
 	}
 )
