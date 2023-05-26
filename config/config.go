@@ -18,7 +18,7 @@ var (
 	ARCHITECTURE       = ""
 	OS                 = ""
 	NAME               = "pandora cash"
-	VERSION            = semver.MustParse("0.1.1-alpha.0")
+	VERSION            = semver.MustParse("0.1.2-alpha.0")
 	VERSION_STRING     = VERSION.String()
 	BUILD_VERSION      = ""
 	LIGHT_COMPUTATIONS = false
