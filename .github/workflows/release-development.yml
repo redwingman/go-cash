@@ -35,7 +35,7 @@ jobs:
             ./bin/pandora-linux-amd64
             ./bin/pandora-linux-386
             ./bin/pandora-linux-arm64
-            ./bin/pandora-linux-arm7l
+            ./bin/pandora-linux-armv7l
             ./bin/pandora-windows-amd64.exe
             ./bin/pandora-windows-386.exe
             ./bin/pandora-windows-arm64.exe
