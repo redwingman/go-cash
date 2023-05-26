@@ -6,11 +6,10 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - "*"
 
 jobs:
-
-  build:
+  tagged-release:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -30,8 +29,7 @@ jobs:
       with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest"
-          prerelease: true
-          title: "Development Build"
+          prerelease: false
           files: |
             ./bin/pandora-linux-amd64
             ./bin/pandora-linux-386
