@@ -1,6 +1,6 @@
 cd ./builds/electron_helper || exit
 
-output="./bin/pandora-electron-helper"
+output="../../bin/electron-helper/pandora-electron-helper"
 
 # to get all possible combinations of GOOS and GOARCH
 # go tool dist list
