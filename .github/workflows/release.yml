@@ -1,0 +1,44 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Go
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19
+        
+    - name: Install dependencies
+      run: go get .
+
+    - name: Build
+      run: ./scripts/build.sh  
+      
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            ./bin/pandora-linux-amd64
+            ./bin/pandora-linux-386
+            ./bin/pandora-linux-arm64
+            ./bin/pandora-linux-armv7l
+            ./bin/pandora-windows-amd64.exe
+            ./bin/pandora-windows-386.exe
+            ./bin/pandora-windows-arm64.exe
+            ./bin/pandora-darwin-amd64
+            ./bin/pandora-darwin-arm64
