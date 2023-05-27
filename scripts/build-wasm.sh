@@ -13,17 +13,18 @@ gitVersion=$(git log -n1 --format=format:"%H")
 gitVersionShort=${gitVersion:0:12}
 
 src=""
-buildOutput="./bin/wasm/pandora"
+buildOutputDir="./bin/wasm/"
+buildOutput="pandora"
 
 if [[ "$*" == *test* ]]; then
-    cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" "${buildOutput}/wasm_exec.js"
+    cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" "${buildOutputDir}/wasm_exec.js"
 fi
 
 if [[ "$*" == *main* ]]; then
-  buildOutput+="-main"
+  buildOutput+="-main.wasm"
   src="./builds/webassembly/"
 elif [[ "$*" == *helper* ]]; then
-  buildOutput+="-helper"
+  buildOutput+="-helper.wasm"
   src="./builds/webassembly_helper/"
 else
   echo "argument main|helper missing"
@@ -31,23 +32,25 @@ else
 fi
 
 if [[ "$*" == *test* ]]; then
-  buildOutput+="-test"
+  buildOutputDir+="test/"
 elif [[ "$*" == *dev* ]]; then
-  buildOutput+="-dev"
+  buildOutputDir+="dev/"
 elif [[ "$*" == *build* ]]; then
-  buildOutput+="-build"
+  buildOutputDir+="build/"
 else
   echo "argument test|dev|build missing"
   exit 1
 fi
 
-buildOutput+=".wasm"
+mkdir -p buildOutputDir
+
+cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" ${buildOutputDir}"wasm_exec.js"
+
+buildOutput=${buildOutputDir}${buildOutput}
 echo ${buildOutput}
 
 go version
 (cd ${src} && GOOS=js GOARCH=wasm go build -ldflags "-s -w -X ${buildFlag}=${gitVersionShort}" -o ../../${buildOutput} )
-
-cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" "./bin/wasm/wasm_exec.js"
 
 if [[ "$*" == *build* ]]; then
 
