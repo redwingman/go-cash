@@ -10,7 +10,7 @@ on:
 jobs:
 
   pre-release:
-    name: "Pre Release"
+    name: "Release Development"
     runs-on: ubuntu-latest
     
     steps:
