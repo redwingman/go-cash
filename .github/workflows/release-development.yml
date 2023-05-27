@@ -34,8 +34,8 @@ jobs:
         bash ./scripts/build-wasm.sh helper build zopfli brotli  
         bash ./scripts/build-electron-helper.sh     
         cd ./bin
-        zip -r artifact-wasm.zip wasm
-        zip -r artifact-electron-helper.zip electron-helper
+        (cd wasm; zip -r ../artifact-wasm.zip *)
+        (cd electron-helper; zip -r ../artifact-electron-helper.zip *)
       
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
