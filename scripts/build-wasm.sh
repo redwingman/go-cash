@@ -47,8 +47,6 @@ echo ${buildOutput}
 go version
 (cd ${src} && GOOS=js GOARCH=wasm go build -ldflags "-s -w -X ${buildFlag}=${gitVersionShort}" -o ../../${buildOutput} )
 
-cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" "./bin/wasm/wasm_exec.js"
-
 if [[ "$*" == *build* ]]; then
 
   rm ${buildOutput}.br 2>/dev/null

@@ -22,9 +22,19 @@ jobs:
     - name: Install dependencies
       run: go get .
 
+    - name: Install libraries
+      run: sudo apt-get install -y brotli zopfli
+
     - name: Build
-      run: ./scripts/build.sh  
-      
+      run: |
+        bash ./scripts/build.sh  
+        bash ./scripts/build-wasm.sh main build zopfli brotli  
+        bash ./scripts/build-wasm.sh helper build zopfli brotli  
+        bash ./scripts/build-electron-helper.sh     
+        cd ./bin
+        zip -r artifact-wasm.zip wasm
+        zip -r artifact-electron-helper.zip electron-helper
+
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -40,3 +50,5 @@ jobs:
             ./bin/pandora-windows-arm64.exe
             ./bin/pandora-darwin-amd64
             ./bin/pandora-darwin-arm64
+            ./bin/artifact-wasm.zip
+            ./bin/artifact-electron-helper.zip
