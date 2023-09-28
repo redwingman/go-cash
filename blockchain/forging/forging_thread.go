@@ -3,7 +3,6 @@ package forging
 import (
 	"bytes"
 	"fmt"
-	"pandora-pay/address_balance_decryptor"
 	"pandora-pay/blockchain/blockchain_types"
 	"pandora-pay/blockchain/blocks/block_complete"
 	"pandora-pay/blockchain/forging/forging_block_work"
@@ -20,7 +19,6 @@ import (
 
 type ForgingThread struct {
 	mempool                   *mempool.Mempool
-	addressBalanceDecryptor   *address_balance_decryptor.AddressBalanceDecryptor
 	threads                   int                                         //number of threads
 	solutionCn                chan<- *blockchain_types.BlockchainSolution //broadcasting that a solution thread was received
 	nextBlockCreatedCn        <-chan *forging_block_work.ForgingWork      //detect if a new work was published
@@ -44,7 +42,7 @@ func (thread *ForgingThread) startForging() {
 
 	forgingWorkerSolutionCn := make(chan *ForgingSolution)
 	for i := 0; i < len(thread.workers); i++ {
-		thread.workers[i] = createForgingWorkerThread(i, forgingWorkerSolutionCn, thread.addressBalanceDecryptor)
+		thread.workers[i] = createForgingWorkerThread(i, forgingWorkerSolutionCn)
 		recovery.SafeGo(thread.workers[i].forge)
 	}
 	thread.workersCreatedCn <- thread.workers
@@ -145,10 +143,9 @@ func (thread *ForgingThread) publishSolution(solution *ForgingSolution) ([]byte,
 	return res.ChainKernelHash, res.Err
 }
 
-func createForgingThread(threads int, createForgingTransactions func(*block_complete.BlockComplete, []byte, uint64, []*transaction.Transaction) (*transaction.Transaction, error), mempool *mempool.Mempool, addressBalanceDecryptor *address_balance_decryptor.AddressBalanceDecryptor, solutionCn chan<- *blockchain_types.BlockchainSolution, nextBlockCreatedCn <-chan *forging_block_work.ForgingWork) *ForgingThread {
+func createForgingThread(threads int, createForgingTransactions func(*block_complete.BlockComplete, []byte, uint64, []*transaction.Transaction) (*transaction.Transaction, error), mempool *mempool.Mempool, solutionCn chan<- *blockchain_types.BlockchainSolution, nextBlockCreatedCn <-chan *forging_block_work.ForgingWork) *ForgingThread {
 	return &ForgingThread{
 		mempool,
-		addressBalanceDecryptor,
 		threads,
 		solutionCn,
 		nextBlockCreatedCn,

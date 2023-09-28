@@ -3,15 +3,13 @@ package main
 import (
 	"os"
 	"os/signal"
-	"pandora-pay/address_balance_decryptor"
+	"pandora-pay/address_balance_decrypter"
 	"pandora-pay/config"
 	"pandora-pay/config/arguments"
 	"pandora-pay/gui"
 	"syscall"
 	"syscall/js"
 )
-
-var AddressBalanceDecryptor *address_balance_decryptor.AddressBalanceDecryptor
 
 func main() {
 	var err error
@@ -28,14 +26,14 @@ func main() {
 		panic(err)
 	}
 
-	if AddressBalanceDecryptor, err = address_balance_decryptor.NewAddressBalanceDecryptor(false); err != nil {
-		return
+	if err = address_balance_decrypter.Initialize(false); err != nil {
+		panic(err)
 	}
 
 	js.Global().Set("PandoraPayHelper", js.ValueOf(map[string]interface{}{
 		"helloPandoraHelper": js.FuncOf(helloPandoraHelper),
 		"wallet": js.ValueOf(map[string]interface{}{
-			"initializeBalanceDecryptor": js.FuncOf(initializeBalanceDecryptor),
+			"initializeBalanceDecrypter": js.FuncOf(initializeBalanceDecrypter),
 			"decryptBalance":             js.FuncOf(decryptBalance),
 		}),
 		"transactions": js.ValueOf(map[string]interface{}{

@@ -1,22 +1,22 @@
-package address_balance_decryptor
+package address_balance_decrypter
 
 import (
 	"context"
 	"pandora-pay/cryptography/bn256"
 )
 
-type addressBalanceDecryptorWorkResult struct {
+type addressBalanceDecrypterWorkResult struct {
 	decryptedBalance uint64
 	err              error
 }
 
-type addressBalanceDecryptorWork struct {
+type addressBalanceDecrypterWork struct {
 	encryptedBalance *bn256.G1
 	previousValue    uint64
 	wait             chan struct{}
 	status           int32 //use atomic
 	time             int64
-	result           *addressBalanceDecryptorWorkResult
+	result           *addressBalanceDecrypterWorkResult
 	ctx              context.Context
 	statusCallback   func(string)
 }

@@ -52,7 +52,7 @@ func (pk *PrivateKey) GetRegistration(staked bool, spendPublicKey []byte) ([]byt
 	return pk.Sign(data)
 }
 
-//make sure message is a hash to avoid leaking any parts of the private key
+// make sure message is a hash to avoid leaking any parts of the private key
 func (pk *PrivateKey) Sign(message []byte) ([]byte, error) {
 	return crypto.SignMessage(message, pk.Key)
 }
@@ -64,13 +64,13 @@ func (pk *PrivateKey) Decrypt(message []byte) ([]byte, error) {
 func (pk *PrivateKey) DecryptBalance(balance *crypto.ElGamal, tryPreviousValue bool, previousValue uint64, ctx context.Context, statusCallback func(string)) (uint64, error) {
 	priv := new(crypto.BNRed).SetBytes(pk.Key)
 	balancePoint := new(bn256.G1).Add(balance.Left, new(bn256.G1).Neg(new(bn256.G1).ScalarMult(balance.Right, priv.BigInt())))
-	return balance_decryptor.BalanceDecryptor.DecryptBalance(balancePoint, tryPreviousValue, previousValue, ctx, statusCallback)
+	return balance_decryptor.BalanceDecrypter.DecryptBalance(balancePoint, tryPreviousValue, previousValue, ctx, statusCallback)
 }
 
 func (pk *PrivateKey) TryDecryptBalance(balance *crypto.ElGamal, matchValue uint64) bool {
 	priv := new(crypto.BNRed).SetBytes(pk.Key)
 	balancePoint := new(bn256.G1).Add(balance.Left, new(bn256.G1).Neg(new(bn256.G1).ScalarMult(balance.Right, priv.BigInt())))
-	return balance_decryptor.BalanceDecryptor.TryDecryptBalance(balancePoint, matchValue)
+	return balance_decryptor.BalanceDecrypter.TryDecryptBalance(balancePoint, matchValue)
 }
 
 func (pk *PrivateKey) Deserialize(buffer []byte) error {

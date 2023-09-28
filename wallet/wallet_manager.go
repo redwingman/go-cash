@@ -8,7 +8,10 @@ import (
 	"errors"
 	"github.com/tyler-smith/go-bip32"
 	"math/rand"
+	"pandora-pay/address_balance_decrypter"
 	"pandora-pay/addresses"
+	"pandora-pay/blockchain/data_storage/accounts/account"
+	"pandora-pay/blockchain/data_storage/registrations/registration"
 	"pandora-pay/config/config_nodes"
 	"pandora-pay/config/globals"
 	"pandora-pay/cryptography"
@@ -153,7 +156,7 @@ func (wallet *Wallet) ImportSecretKey(name string, secret []byte, staked, spendR
 	return addr, nil
 }
 
-func (wallet *Wallet) AddSharedStakedAddress(addr *wallet_address.WalletAddress, lock bool) (err error) {
+func (wallet *Wallet) AddSharedStakedAddress(addr *wallet_address.WalletAddress, lock, hasAccount bool, account *account.Account, reg *registration.Registration, chainHeight uint64) (err error) {
 
 	if lock {
 		wallet.Lock.Lock()
@@ -181,7 +184,7 @@ func (wallet *Wallet) AddSharedStakedAddress(addr *wallet_address.WalletAddress,
 	wallet.Addresses = append(wallet.Addresses, addr)
 	wallet.addressesMap[string(addr.PublicKey)] = addr
 
-	wallet.forging.Wallet.AddWallet(addr.PublicKey, addr.SharedStaked, false, nil, nil, 0)
+	wallet.forging.Wallet.AddWallet(addr.PublicKey, addr.SharedStaked, hasAccount, account, reg, chainHeight)
 
 	wallet.Count += 1
 
@@ -553,7 +556,7 @@ func (wallet *Wallet) DecryptBalance(addr *wallet_address.WalletAddress, encrypt
 		return 0, errors.New("Encrypted Balance is nil")
 	}
 
-	return wallet.addressBalanceDecryptor.DecryptBalance("wallet", addr.PublicKey, addr.PrivateKey.Key, encryptedBalance, asset, useNewPreviousValue, newPreviousValue, store, ctx, statusCallback)
+	return address_balance_decrypter.Decrypter.DecryptBalance("wallet", addr.PublicKey, addr.PrivateKey.Key, encryptedBalance, asset, useNewPreviousValue, newPreviousValue, store, ctx, statusCallback)
 }
 
 func (wallet *Wallet) DecryptBalanceByPublicKey(publicKey []byte, encryptedBalance, asset []byte, useNewPreviousValue bool, newPreviousValue uint64, store, lock bool, ctx context.Context, statusCallback func(string)) (uint64, error) {
@@ -591,7 +594,7 @@ func (wallet *Wallet) TryDecryptBalance(addr *wallet_address.WalletAddress, encr
 
 func (wallet *Wallet) ImportWalletJSON(data []byte) (err error) {
 
-	wallet2 := createWallet(wallet.forging, wallet.mempool, wallet.addressBalanceDecryptor, wallet.updateNewChainUpdate)
+	wallet2 := createWallet(wallet.forging, wallet.mempool, wallet.updateNewChainUpdate)
 	if err = json.Unmarshal(data, wallet2); err != nil {
 		return errors.New("Error unmarshaling wallet")
 	}

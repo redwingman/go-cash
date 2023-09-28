@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/tevino/abool"
-	"pandora-pay/address_balance_decryptor"
+	"pandora-pay/address_balance_decrypter"
 	"pandora-pay/blockchain/blockchain_types"
 	"pandora-pay/blockchain/data_storage"
 	"pandora-pay/blockchain/data_storage/accounts"
@@ -24,17 +24,16 @@ import (
 )
 
 type ForgingWallet struct {
-	addressBalanceDecryptor *address_balance_decryptor.AddressBalanceDecryptor
-	addressesMap            map[string]*ForgingWalletAddress
-	workersAddresses        []int
-	workers                 []*ForgingWorkerThread
-	updateNewChainUpdate    *multicast.MulticastChannel[*blockchain_types.BlockchainUpdates]
-	updateWalletAddressCn   chan *ForgingWalletAddressUpdate
-	workersCreatedCn        <-chan []*ForgingWorkerThread
-	workersDestroyedCn      <-chan struct{}
-	decryptBalancesUpdates  *generics.Map[string, *ForgingWalletAddress]
-	forging                 *Forging
-	initialized             *abool.AtomicBool
+	addressesMap           map[string]*ForgingWalletAddress
+	workersAddresses       []int
+	workers                []*ForgingWorkerThread
+	updateNewChainUpdate   *multicast.MulticastChannel[*blockchain_types.BlockchainUpdates]
+	updateWalletAddressCn  chan *ForgingWalletAddressUpdate
+	workersCreatedCn       <-chan []*ForgingWorkerThread
+	workersDestroyedCn     <-chan struct{}
+	decryptBalancesUpdates *generics.Map[string, *ForgingWalletAddress]
+	forging                *Forging
+	initialized            *abool.AtomicBool
 }
 
 type ForgingWalletAddressUpdate struct {
@@ -109,7 +108,7 @@ func (w *ForgingWallet) runDecryptBalanceAndNotifyWorkers() {
 			continue
 		} else {
 			stakingAmountEncryptedBalanceSerialized := addr.account.Balance.Amount.Serialize()
-			addr.decryptedStakingBalance, _ = w.addressBalanceDecryptor.DecryptBalance("staking", addr.publicKey, addr.privateKey.Key, stakingAmountEncryptedBalanceSerialized, config_coins.NATIVE_ASSET_FULL, false, 0, true, context.Background(), func(string) {})
+			addr.decryptedStakingBalance, _ = address_balance_decrypter.Decrypter.DecryptBalance("wallet", addr.publicKey, addr.privateKey.Key, stakingAmountEncryptedBalanceSerialized, config_coins.NATIVE_ASSET_FULL, false, 0, true, context.Background(), func(string) {})
 
 			w.workers[addr.workerIndex].addWalletAddressCn <- addr
 		}

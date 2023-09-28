@@ -1,4 +1,4 @@
-package address_balance_decryptor
+package address_balance_decrypter
 
 import (
 	"pandora-pay/gui"
@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (decryptor *AddressBalanceDecryptor) loadFromStore() error {
+func (decryptor *AddressBalanceDecrypter) loadFromStore() error {
 	return store.StoreBalancesDecrypted.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
 
 		bytes := reader.Get("map")
@@ -29,7 +29,7 @@ func (decryptor *AddressBalanceDecryptor) loadFromStore() error {
 	})
 }
 
-func (decryptor *AddressBalanceDecryptor) saveToStore() {
+func (decryptor *AddressBalanceDecrypter) saveToStore() {
 	for {
 		time.Sleep(2 * time.Minute)
 
@@ -54,9 +54,9 @@ func (decryptor *AddressBalanceDecryptor) saveToStore() {
 			writer.Put("map", bytes)
 			return
 		}); err != nil {
-			gui.GUI.Error("Error storing Address Balance Decryptor", err)
+			gui.GUI.Error("Error storing Address Balance Decrypter", err)
 		}
 
-		gui.GUI.Log("AddressBalanceDecryptor saveToStore ", len(data))
+		gui.GUI.Log("AddressBalanceDecrypter saveToStore ", len(data))
 	}
 }

@@ -12,7 +12,7 @@ import (
 
 // table size cannot be more than 1<<24
 
-type BalanceDecryptorType struct {
+type BalanceDecrypterType struct {
 	once            *sync.Once
 	tableComputedCn chan *LookupTable
 	tableSize       int
@@ -20,13 +20,13 @@ type BalanceDecryptorType struct {
 	readyCn         chan struct{}
 }
 
-func (this *BalanceDecryptorType) TryDecryptBalance(p *bn256.G1, matchBalance uint64) bool {
+func (this *BalanceDecrypterType) TryDecryptBalance(p *bn256.G1, matchBalance uint64) bool {
 	var acc bn256.G1
 	acc.ScalarMult(crypto.G, new(big.Int).SetUint64(matchBalance))
 	return acc.String() == p.String()
 }
 
-func (this *BalanceDecryptorType) DecryptBalance(p *bn256.G1, tryPreviousValue bool, previousBalance uint64, ctx context.Context, statusCallback func(string)) (uint64, error) {
+func (this *BalanceDecrypterType) DecryptBalance(p *bn256.G1, tryPreviousValue bool, previousBalance uint64, ctx context.Context, statusCallback func(string)) (uint64, error) {
 
 	if tryPreviousValue {
 		if this.TryDecryptBalance(p, previousBalance) {
@@ -42,7 +42,7 @@ func (this *BalanceDecryptorType) DecryptBalance(p *bn256.G1, tryPreviousValue b
 	return tableLookup.Lookup(p, ctx, statusCallback)
 }
 
-func (this *BalanceDecryptorType) SetTableSize(newTableSize int, ctx context.Context, statusCallback func(string)) *LookupTable {
+func (this *BalanceDecrypterType) SetTableSize(newTableSize int, ctx context.Context, statusCallback func(string)) *LookupTable {
 
 	this.once.Do(func() {
 
@@ -75,11 +75,11 @@ func (this *BalanceDecryptorType) SetTableSize(newTableSize int, ctx context.Con
 	return this.tableLookup
 }
 
-var BalanceDecryptor *BalanceDecryptorType
+var BalanceDecrypter *BalanceDecrypterType
 
 func init() {
 
-	BalanceDecryptor = &BalanceDecryptorType{
+	BalanceDecrypter = &BalanceDecrypterType{
 		&sync.Once{},
 		make(chan *LookupTable),
 		0,

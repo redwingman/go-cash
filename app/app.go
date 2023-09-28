@@ -1,7 +1,6 @@
 package app
 
 import (
-	"pandora-pay/address_balance_decryptor"
 	"pandora-pay/blockchain"
 	"pandora-pay/blockchain/forging"
 	"pandora-pay/gui"
@@ -12,12 +11,11 @@ import (
 )
 
 var (
-	Settings                *settings.Settings
-	Wallet                  *wallet.Wallet
-	Forging                 *forging.Forging
-	Mempool                 *mempool.Mempool
-	AddressBalanceDecryptor *address_balance_decryptor.AddressBalanceDecryptor
-	Chain                   *blockchain.Blockchain
+	Settings *settings.Settings
+	Wallet   *wallet.Wallet
+	Forging  *forging.Forging
+	Mempool  *mempool.Mempool
+	Chain    *blockchain.Blockchain
 )
 
 func Close() {

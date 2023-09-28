@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"net/http"
+	"pandora-pay/address_balance_decrypter"
 	"pandora-pay/addresses"
 	"pandora-pay/blockchain/data_storage"
 	"pandora-pay/blockchain/data_storage/accounts"
@@ -47,6 +48,7 @@ func (api *DelegatorNode) DelegatorNotify(r *http.Request, args *ApiDelegatorNod
 	}
 
 	var acc *account.Account
+	var reg *registration.Registration
 	var chainHeight uint64
 
 	if err = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
@@ -54,7 +56,6 @@ func (api *DelegatorNode) DelegatorNotify(r *http.Request, args *ApiDelegatorNod
 		chainHeight, _ = binary.Uvarint(reader.Get("chainHeight"))
 		dataStorage := data_storage.NewDataStorage(reader)
 
-		var reg *registration.Registration
 		if reg, err = dataStorage.Regs.Get(string(sharedStakedPublicKey)); err != nil {
 			return
 		}
@@ -84,9 +85,15 @@ func (api *DelegatorNode) DelegatorNotify(r *http.Request, args *ApiDelegatorNod
 		return err
 	}
 
+	if acc == nil || acc.Balance == nil {
+		return errors.New("Account not found")
+	}
+
 	if !sharedStakedPrivateKey.TryDecryptBalance(acc.Balance.Amount, args.SharedStakedBalance) {
 		return errors.New("Decrypt Balance Doesn't match. Try again")
 	}
+
+	address_balance_decrypter.Decrypter.SaveDecryptedBalance("wallet", sharedStakedPublicKey, config_coins.NATIVE_ASSET_FULL, args.SharedStakedBalance)
 
 	if args.SharedStakedBalance < config_stake.GetRequiredStake(chainHeight) {
 		return errors.New("Your stake is not accepted because you will need at least the minimum staking amount")
@@ -113,7 +120,7 @@ func (api *DelegatorNode) DelegatorNotify(r *http.Request, args *ApiDelegatorNod
 		},
 		"",
 		"",
-	}, true); err != nil {
+	}, true, true, acc, reg, chainHeight); err != nil {
 		return
 	}
 

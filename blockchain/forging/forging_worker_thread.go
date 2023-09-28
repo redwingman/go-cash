@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"math/big"
-	"pandora-pay/address_balance_decryptor"
 	"pandora-pay/blockchain/blocks/block_complete"
 	"pandora-pay/blockchain/forging/forging_block_work"
 	"pandora-pay/config"
@@ -30,13 +29,12 @@ type ForgingSolution struct {
 }
 
 type ForgingWorkerThread struct {
-	addressBalanceDecryptor *address_balance_decryptor.AddressBalanceDecryptor
-	hashes                  uint32
-	index                   int
-	workCn                  chan *forging_block_work.ForgingWork
-	workerSolutionCn        chan *ForgingSolution
-	addWalletAddressCn      chan *ForgingWalletAddress
-	removeWalletAddressCn   chan string //publicKey
+	hashes                uint32
+	index                 int
+	workCn                chan *forging_block_work.ForgingWork
+	workerSolutionCn      chan *ForgingSolution
+	addWalletAddressCn    chan *ForgingWalletAddress
+	removeWalletAddressCn chan string //publicKey
 }
 
 type ForgingWorkerThreadAddress struct {
@@ -295,13 +293,12 @@ func (worker *ForgingWorkerThread) forge() {
 
 }
 
-func createForgingWorkerThread(index int, workerSolutionCn chan *ForgingSolution, addressBalanceDecryptor *address_balance_decryptor.AddressBalanceDecryptor) *ForgingWorkerThread {
+func createForgingWorkerThread(index int, workerSolutionCn chan *ForgingSolution) *ForgingWorkerThread {
 	return &ForgingWorkerThread{
-		addressBalanceDecryptor: addressBalanceDecryptor,
-		index:                   index,
-		workCn:                  make(chan *forging_block_work.ForgingWork),
-		workerSolutionCn:        workerSolutionCn,
-		addWalletAddressCn:      make(chan *ForgingWalletAddress),
-		removeWalletAddressCn:   make(chan string),
+		index:                 index,
+		workCn:                make(chan *forging_block_work.ForgingWork),
+		workerSolutionCn:      workerSolutionCn,
+		addWalletAddressCn:    make(chan *ForgingWalletAddress, 1000),
+		removeWalletAddressCn: make(chan string),
 	}
 }

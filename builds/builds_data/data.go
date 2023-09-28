@@ -6,7 +6,7 @@ import (
 	"pandora-pay/txs_builder/wizard"
 )
 
-type WalletInitializeBalanceDecryptorReq struct {
+type WalletInitializeBalanceDecrypterReq struct {
 	TableSize int `json:"tableSize"`
 }
 

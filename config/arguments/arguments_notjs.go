@@ -53,8 +53,8 @@ Options:
   --delegates-maximum=args                           Maximum number of Delegates
   --auth-users=args                                  Credential for Authenticated Users. Arguments must be a JSON "[{'user': 'username', 'pass': 'secret'}]".
   --light-computations                               Reduces the computations for a testnet node.
-  --balance-decryptor-disable-init                   Disable first balance decryptor initialization. 
-  --balance-decryptor-table-size=size                Balance Decryptor initial table size. [default: 23]
+  --balance-decrypter-disable-init                   Disable first balance decryptor initialization. 
+  --balance-decrypter-table-size=size                Balance Decrypter initial table size. [default: 23]
   --exit                                             Exit node.
   --skip-init-sync                                   Skip sync wait at when the node started. Useful when creating a new testnet.
 `

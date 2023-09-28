@@ -3,9 +3,8 @@ package main
 import (
 	"os"
 	"os/signal"
-	"pandora-pay/address_balance_decryptor"
+	"pandora-pay/address_balance_decrypter"
 	"pandora-pay/builds/electron_helper/server"
-	"pandora-pay/builds/electron_helper/server/global"
 	"pandora-pay/config"
 	"pandora-pay/config/arguments"
 	"pandora-pay/gui"
@@ -27,8 +26,8 @@ func main() {
 		panic(err)
 	}
 
-	if global.AddressBalanceDecryptor, err = address_balance_decryptor.NewAddressBalanceDecryptor(false); err != nil {
-		return
+	if err := address_balance_decrypter.Initialize(false); err != nil {
+		panic(err)
 	}
 
 	if err = server.CreateServer(); err != nil {

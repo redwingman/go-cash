@@ -6,7 +6,7 @@ import (
 	"math"
 	"os"
 	"os/signal"
-	"pandora-pay/address_balance_decryptor"
+	"pandora-pay/address_balance_decrypter"
 	"pandora-pay/app"
 	"pandora-pay/blockchain"
 	"pandora-pay/blockchain/forging"
@@ -61,7 +61,7 @@ func StartMainNow() (err error) {
 	}
 	globals.MainEvents.BroadcastEvent("main", "txs validator initialized")
 
-	if app.AddressBalanceDecryptor, err = address_balance_decryptor.NewAddressBalanceDecryptor(runtime.GOARCH != "wasm"); err != nil {
+	if err = address_balance_decrypter.Initialize(runtime.GOARCH != "wasm"); err != nil {
 		return
 	}
 	globals.MainEvents.BroadcastEvent("main", "address balance decryptor validator initialized")
@@ -71,7 +71,7 @@ func StartMainNow() (err error) {
 	}
 	globals.MainEvents.BroadcastEvent("main", "mempool initialized")
 
-	if app.Forging, err = forging.CreateForging(app.Mempool, app.AddressBalanceDecryptor); err != nil {
+	if app.Forging, err = forging.CreateForging(app.Mempool); err != nil {
 		return
 	}
 	globals.MainEvents.BroadcastEvent("main", "forging initialized")
@@ -81,7 +81,7 @@ func StartMainNow() (err error) {
 	}
 	globals.MainEvents.BroadcastEvent("main", "blockchain initialized")
 
-	if app.Wallet, err = wallet.CreateWallet(app.Forging, app.Mempool, app.AddressBalanceDecryptor); err != nil {
+	if app.Wallet, err = wallet.CreateWallet(app.Forging, app.Mempool); err != nil {
 		return
 	}
 	if err = app.Wallet.ProcessWalletArguments(); err != nil {
@@ -108,9 +108,9 @@ func StartMainNow() (err error) {
 		go func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			gui.GUI.Info2Update("Decryptor", "Init... "+strconv.Itoa(int(math.Log2(float64(tableSize)))))
-			balance_decryptor.BalanceDecryptor.SetTableSize(tableSize, ctx, func(string) {})
-			gui.GUI.Info2Update("Decryptor", "Ready "+strconv.Itoa(int(math.Log2(float64(tableSize)))))
+			gui.GUI.Info2Update("Decrypter", "Init... "+strconv.Itoa(int(math.Log2(float64(tableSize)))))
+			balance_decryptor.BalanceDecrypter.SetTableSize(tableSize, ctx, func(string) {})
+			gui.GUI.Info2Update("Decrypter", "Ready "+strconv.Itoa(int(math.Log2(float64(tableSize)))))
 		}()
 	}
 

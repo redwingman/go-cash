@@ -2,7 +2,6 @@ package forging
 
 import (
 	"github.com/tevino/abool"
-	"pandora-pay/address_balance_decryptor"
 	"pandora-pay/blockchain/blockchain_types"
 	"pandora-pay/blockchain/blocks/block_complete"
 	"pandora-pay/blockchain/forging/forging_block_work"
@@ -16,22 +15,19 @@ import (
 )
 
 type Forging struct {
-	mempool                 *mempool.Mempool
-	addressBalanceDecryptor *address_balance_decryptor.AddressBalanceDecryptor
-	Wallet                  *ForgingWallet
-	started                 *abool.AtomicBool
-	forgingThread           *ForgingThread
-	nextBlockCreatedCn      <-chan *forging_block_work.ForgingWork
-	forgingSolutionCn       chan<- *blockchain_types.BlockchainSolution
+	mempool            *mempool.Mempool
+	Wallet             *ForgingWallet
+	started            *abool.AtomicBool
+	forgingThread      *ForgingThread
+	nextBlockCreatedCn <-chan *forging_block_work.ForgingWork
+	forgingSolutionCn  chan<- *blockchain_types.BlockchainSolution
 }
 
-func CreateForging(mempool *mempool.Mempool, addressBalanceDecryptor *address_balance_decryptor.AddressBalanceDecryptor) (*Forging, error) {
+func CreateForging(mempool *mempool.Mempool) (*Forging, error) {
 
 	forging := &Forging{
 		mempool,
-		addressBalanceDecryptor,
 		&ForgingWallet{
-			addressBalanceDecryptor,
 			map[string]*ForgingWalletAddress{},
 			[]int{},
 			[]*ForgingWorkerThread{},
@@ -57,7 +53,7 @@ func (forging *Forging) InitializeForging(createForgingTransactions func(*block_
 	forging.Wallet.updateNewChainUpdate = updateNewChainUpdate
 	forging.forgingSolutionCn = forgingSolutionCn
 
-	forging.forgingThread = createForgingThread(config.CPU_THREADS, createForgingTransactions, forging.mempool, forging.addressBalanceDecryptor, forging.forgingSolutionCn, forging.nextBlockCreatedCn)
+	forging.forgingThread = createForgingThread(config.CPU_THREADS, createForgingTransactions, forging.mempool, forging.forgingSolutionCn, forging.nextBlockCreatedCn)
 	forging.Wallet.workersCreatedCn = forging.forgingThread.workersCreatedCn
 	forging.Wallet.workersDestroyedCn = forging.forgingThread.workersDestroyedCn
 
