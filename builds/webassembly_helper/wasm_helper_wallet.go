@@ -5,7 +5,7 @@ import (
 	"pandora-pay/address_balance_decrypter"
 	"pandora-pay/builds/builds_data"
 	"pandora-pay/builds/webassembly/webassembly_utils"
-	"pandora-pay/cryptography/crypto/balance_decryptor"
+	"pandora-pay/cryptography/crypto/balance_decrypter"
 	"strconv"
 	"syscall/js"
 	"time"
@@ -22,7 +22,7 @@ func initializeBalanceDecrypter(this js.Value, args []js.Value) interface{} {
 			return nil, err
 		}
 
-		balance_decryptor.BalanceDecrypter.SetTableSize(parameters.TableSize, ctx, func(status string) {
+		balance_decrypter.BalanceDecrypter.SetTableSize(parameters.TableSize, ctx, func(status string) {
 			args[1].Invoke(status)
 		})
 

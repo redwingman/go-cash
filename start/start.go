@@ -16,7 +16,7 @@ import (
 	"pandora-pay/config/arguments"
 	"pandora-pay/config/config_forging"
 	"pandora-pay/config/globals"
-	"pandora-pay/cryptography/crypto/balance_decryptor"
+	"pandora-pay/cryptography/crypto/balance_decrypter"
 	"pandora-pay/gui"
 	"pandora-pay/helpers/debugging_pprof"
 	"pandora-pay/mempool"
@@ -109,7 +109,7 @@ func StartMainNow() (err error) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			gui.GUI.Info2Update("Decrypter", "Init... "+strconv.Itoa(int(math.Log2(float64(tableSize)))))
-			balance_decryptor.BalanceDecrypter.SetTableSize(tableSize, ctx, func(string) {})
+			balance_decrypter.BalanceDecrypter.SetTableSize(tableSize, ctx, func(string) {})
 			gui.GUI.Info2Update("Decrypter", "Ready "+strconv.Itoa(int(math.Log2(float64(tableSize)))))
 		}()
 	}

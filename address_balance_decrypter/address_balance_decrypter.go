@@ -6,7 +6,7 @@ import (
 	"pandora-pay/config"
 	"pandora-pay/cryptography/bn256"
 	"pandora-pay/cryptography/crypto"
-	"pandora-pay/cryptography/crypto/balance_decryptor"
+	"pandora-pay/cryptography/crypto/balance_decrypter"
 	"pandora-pay/helpers/generics"
 )
 
@@ -37,7 +37,7 @@ func (decryptor *AddressBalanceDecrypter) DecryptBalance(decryptionName string, 
 	}
 
 	balancePoint := new(bn256.G1).Add(balance.Left, new(bn256.G1).Neg(new(bn256.G1).ScalarMult(balance.Right, new(crypto.BNRed).SetBytes(privateKey).BigInt())))
-	if balance_decryptor.BalanceDecrypter.TryDecryptBalance(balancePoint, previousValue) {
+	if balance_decrypter.BalanceDecrypter.TryDecryptBalance(balancePoint, previousValue) {
 		return previousValue, nil
 	}
 
