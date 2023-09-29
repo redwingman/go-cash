@@ -8,6 +8,7 @@ import (
 	"pandora-pay/blockchain/data_storage/accounts"
 	"pandora-pay/blockchain/data_storage/accounts/account"
 	"pandora-pay/blockchain/data_storage/registrations/registration"
+	"pandora-pay/blockchain/forging"
 	"pandora-pay/config/config_coins"
 	"pandora-pay/config/config_forging"
 	"pandora-pay/config/globals"
@@ -21,41 +22,41 @@ import (
 	"strconv"
 )
 
-func (wallet *Wallet) saveWalletAddress(adr *wallet_address.WalletAddress, lock bool) error {
+func (self *wallet) saveWalletAddress(adr *wallet_address.WalletAddress, lock bool) error {
 
 	if lock {
-		wallet.Lock.RLock()
-		defer wallet.Lock.RUnlock()
+		self.Lock.RLock()
+		defer self.Lock.RUnlock()
 	}
 
-	for i, adr2 := range wallet.Addresses {
+	for i, adr2 := range self.Addresses {
 		if adr2 == adr {
-			return wallet.saveWallet(i, i+1, -1, false)
+			return self.saveWallet(i, i+1, -1, false)
 		}
 	}
 
 	return nil
 }
 
-func (wallet *Wallet) saveWalletEntire(lock bool) error {
+func (self *wallet) saveWalletEntire(lock bool) error {
 	if lock {
-		wallet.Lock.RLock()
-		defer wallet.Lock.RUnlock()
+		self.Lock.RLock()
+		defer self.Lock.RUnlock()
 	}
-	return wallet.saveWallet(0, wallet.Count, -1, false)
+	return self.saveWallet(0, self.Count, -1, false)
 }
 
-func (wallet *Wallet) saveWallet(start, end, deleteIndex int, lock bool) error {
+func (self *wallet) saveWallet(start, end, deleteIndex int, lock bool) error {
 
 	if lock {
-		wallet.Lock.RLock()
-		defer wallet.Lock.RUnlock()
+		self.Lock.RLock()
+		defer self.Lock.RUnlock()
 	}
 
 	start = generics.Max(0, start)
-	end = generics.Min(end, len(wallet.Addresses))
+	end = generics.Min(end, len(self.Addresses))
 
-	if !wallet.Loaded {
+	if !self.Loaded {
 		return errors.New("Can't save your wallet because your stored wallet on the drive was not successfully loaded")
 	}
 
@@ -65,25 +66,25 @@ func (wallet *Wallet) saveWallet(start, end, deleteIndex int, lock bool) error {
 
 		writer.Put("saved", []byte{0})
 
-		if marshal, err = helpers.GetMarshalledDataExcept(wallet.Encryption); err != nil {
+		if marshal, err = helpers.GetMarshalledDataExcept(self.Encryption); err != nil {
 			return
 		}
 		writer.Put("encryption", marshal)
 
-		if marshal, err = helpers.GetMarshalledDataExcept(wallet, "addresses", "encryption"); err != nil {
+		if marshal, err = helpers.GetMarshalledDataExcept(self, "addresses", "encryption"); err != nil {
 			return
 		}
-		if marshal, err = wallet.Encryption.encryptData(marshal); err != nil {
+		if marshal, err = self.Encryption.encryptData(marshal); err != nil {
 			return
 		}
 
 		writer.Put("wallet", marshal)
 
 		for i := start; i < end; i++ {
-			if marshal, err = msgpack.Marshal(wallet.Addresses[i]); err != nil {
+			if marshal, err = msgpack.Marshal(self.Addresses[i]); err != nil {
 				return
 			}
-			if marshal, err = wallet.Encryption.encryptData(marshal); err != nil {
+			if marshal, err = self.Encryption.encryptData(marshal); err != nil {
 				return
 			}
 			writer.Put("wallet-address-"+strconv.Itoa(i), marshal)
@@ -97,15 +98,15 @@ func (wallet *Wallet) saveWallet(start, end, deleteIndex int, lock bool) error {
 	})
 }
 
-func (wallet *Wallet) loadWallet(password string, firstTime bool) error {
-	wallet.Lock.Lock()
-	defer wallet.Lock.Unlock()
+func (self *wallet) loadWallet(password string, firstTime bool) error {
+	self.Lock.Lock()
+	defer self.Lock.Unlock()
 
-	if wallet.Loaded {
+	if self.Loaded {
 		return errors.New("Wallet was already loaded!")
 	}
 
-	wallet.clearWallet()
+	self.clearWallet()
 
 	return store.StoreWallet.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
 
@@ -124,33 +125,33 @@ func (wallet *Wallet) loadWallet(password string, firstTime bool) error {
 			if unmarshal == nil {
 				return errors.New("encryption data was not found")
 			}
-			if err = msgpack.Unmarshal(unmarshal, wallet.Encryption); err != nil {
+			if err = msgpack.Unmarshal(unmarshal, self.Encryption); err != nil {
 				return
 			}
 
-			if wallet.Encryption.Encrypted != ENCRYPTED_VERSION_PLAIN_TEXT {
+			if self.Encryption.Encrypted != ENCRYPTED_VERSION_PLAIN_TEXT {
 				if password == "" {
 					return nil
 				}
-				wallet.Encryption.password = password
-				if err = wallet.Encryption.createEncryptionCipher(); err != nil {
+				self.Encryption.password = password
+				if err = self.Encryption.createEncryptionCipher(); err != nil {
 					return
 				}
 			}
 
-			if unmarshal, err = wallet.Encryption.decryptData(reader.Get("wallet")); err != nil {
+			if unmarshal, err = self.Encryption.decryptData(reader.Get("wallet")); err != nil {
 				return
 			}
-			if err = msgpack.Unmarshal(unmarshal, wallet); err != nil {
+			if err = msgpack.Unmarshal(unmarshal, self); err != nil {
 				return
 			}
 
-			wallet.Addresses = make([]*wallet_address.WalletAddress, 0)
-			wallet.addressesMap = make(map[string]*wallet_address.WalletAddress)
+			self.Addresses = make([]*wallet_address.WalletAddress, 0)
+			self.addressesMap = make(map[string]*wallet_address.WalletAddress)
 
-			for i := 0; i < wallet.Count; i++ {
+			for i := 0; i < self.Count; i++ {
 
-				if unmarshal, err = wallet.Encryption.decryptData(reader.Get("wallet-address-" + strconv.Itoa(i))); err != nil {
+				if unmarshal, err = self.Encryption.decryptData(reader.Get("wallet-address-" + strconv.Itoa(i))); err != nil {
 					return
 				}
 
@@ -165,14 +166,14 @@ func (wallet *Wallet) loadWallet(password string, firstTime bool) error {
 					}
 				}
 
-				wallet.Addresses = append(wallet.Addresses, newWalletAddress)
-				wallet.addressesMap[string(newWalletAddress.PublicKey)] = newWalletAddress
+				self.Addresses = append(self.Addresses, newWalletAddress)
+				self.addressesMap[string(newWalletAddress.PublicKey)] = newWalletAddress
 
 			}
 
-			wallet.setLoaded(true)
+			self.setLoaded(true)
 			if !firstTime {
-				if err = wallet.walletLoaded(firstTime); err != nil {
+				if err = self.walletLoaded(firstTime); err != nil {
 					return
 				}
 			}
@@ -184,37 +185,37 @@ func (wallet *Wallet) loadWallet(password string, firstTime bool) error {
 	})
 }
 
-func (wallet *Wallet) walletLoaded(firstTime bool) error {
+func (self *wallet) walletLoaded(firstTime bool) error {
 
 	if !firstTime {
-		if err := wallet.InitForgingWallet(); err != nil {
+		if err := self.InitForgingWallet(); err != nil {
 			return err
 		}
 	}
 
-	wallet.updateWallet()
-	globals.MainEvents.BroadcastEvent("wallet/loaded", wallet.Count)
-	gui.GUI.Log("Wallet Loaded! " + strconv.Itoa(wallet.Count))
+	self.updateWallet()
+	globals.MainEvents.BroadcastEvent("wallet/loaded", self.Count)
+	gui.GUI.Log("Wallet Loaded! " + strconv.Itoa(self.Count))
 
 	return nil
 }
 
-func (wallet *Wallet) StartWallet() error {
+func (self *wallet) StartWallet() error {
 
-	wallet.Lock.Lock()
-	defer wallet.Lock.Unlock()
+	self.Lock.Lock()
+	defer self.Lock.Unlock()
 
-	return wallet.walletLoaded(true)
+	return self.walletLoaded(true)
 }
 
-func (wallet *Wallet) InitForgingWallet() (err error) {
+func (self *wallet) InitForgingWallet() (err error) {
 
 	if !config_forging.FORGING_ENABLED {
 		return nil
 	}
 
-	for _, addr := range wallet.Addresses {
-		if err = wallet.forging.Wallet.AddWallet(addr.PublicKey, addr.SharedStaked, false, nil, nil, 0); err != nil {
+	for _, addr := range self.Addresses {
+		if err = forging.Forging.Wallet.AddWallet(addr.PublicKey, addr.SharedStaked, false, nil, nil, 0); err != nil {
 			return
 		}
 	}
@@ -228,7 +229,7 @@ func (wallet *Wallet) InitForgingWallet() (err error) {
 			return
 		}
 
-		for _, addr := range wallet.Addresses {
+		for _, addr := range self.Addresses {
 
 			var acc *account.Account
 			var reg *registration.Registration
@@ -240,7 +241,7 @@ func (wallet *Wallet) InitForgingWallet() (err error) {
 				return
 			}
 
-			if err = wallet.refreshWalletAccount(acc, reg, chainHeight, addr); err != nil {
+			if err = self.refreshWalletAccount(acc, reg, chainHeight, addr); err != nil {
 				return
 			}
 		}

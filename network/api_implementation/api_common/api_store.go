@@ -2,7 +2,6 @@ package api_common
 
 import (
 	"errors"
-	"pandora-pay/blockchain"
 	"pandora-pay/blockchain/blocks/block"
 	"pandora-pay/blockchain/info"
 	"pandora-pay/helpers/advanced_buffers"
@@ -12,7 +11,6 @@ import (
 )
 
 type APIStore struct {
-	chain *blockchain.Blockchain
 }
 
 func (apiStore *APIStore) loadTxInfo(reader store_db_interface.StoreDBTransactionInterface, hash []byte, reply *info.TxInfo) error {
@@ -54,8 +52,6 @@ func (chain *APIStore) loadBlock(reader store_db_interface.StoreDBTransactionInt
 	return blk, blk.Deserialize(advanced_buffers.NewBufferReader(blockData))
 }
 
-func NewAPIStore(chain *blockchain.Blockchain) *APIStore {
-	return &APIStore{
-		chain: chain,
-	}
+func NewAPIStore() *APIStore {
+	return &APIStore{}
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"pandora-pay/cryptography"
+	"pandora-pay/mempool"
 )
 
 type APIMempoolExistsRequest struct {
@@ -18,6 +19,6 @@ func (api *APICommon) GetMempoolExists(r *http.Request, args *APIMempoolExistsRe
 	if len(args.Hash) != cryptography.HashSize {
 		return errors.New("TxId must be 32 byte")
 	}
-	reply.Result = api.mempool.Txs.Get(string(args.Hash)) != nil
+	reply.Result = mempool.Mempool.Txs.Get(string(args.Hash)) != nil
 	return nil
 }

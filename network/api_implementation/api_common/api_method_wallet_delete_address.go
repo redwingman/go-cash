@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"pandora-pay/network/api_implementation/api_common/api_types"
+	"pandora-pay/wallet"
 )
 
 type APIWalletDeleteAddressRequest struct {
@@ -24,6 +25,6 @@ func (api *APICommon) GetWalletDeleteAddress(r *http.Request, args *APIWalletDel
 		return err
 	}
 
-	reply.Status, err = api.wallet.RemoveAddressByPublicKey(publicKey, true)
+	reply.Status, err = wallet.Wallet.RemoveAddressByPublicKey(publicKey, true)
 	return err
 }

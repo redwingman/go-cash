@@ -11,6 +11,7 @@ import (
 	"pandora-pay/helpers"
 	"pandora-pay/helpers/advanced_buffers"
 	"pandora-pay/helpers/msgpack"
+	"pandora-pay/mempool"
 	"pandora-pay/network/api_code/api_code_types"
 	"pandora-pay/store"
 	"pandora-pay/store/store_db/store_db_interface"
@@ -83,7 +84,7 @@ func (api *APICommon) openLoadTx(args *APITxRequest, reply *APITxReply) error {
 func (api *APICommon) GetTx(r *http.Request, args *APITxRequest, reply *APITxReply) error {
 
 	if len(args.Hash) == cryptography.HashSize {
-		txMempool := api.mempool.Txs.Get(string(args.Hash))
+		txMempool := mempool.Mempool.Txs.Get(string(args.Hash))
 		if txMempool != nil {
 			reply.Mempool = true
 			reply.Tx = txMempool.Tx

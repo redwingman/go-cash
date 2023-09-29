@@ -10,16 +10,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"pandora-pay/blockchain"
-	"pandora-pay/mempool"
 	"pandora-pay/network/api_implementation/api_common"
 	"pandora-pay/network/api_implementation/api_http"
 	"pandora-pay/network/api_implementation/api_websockets"
 	"pandora-pay/network/network_config"
 	"pandora-pay/network/server/node_http_rpc"
 	"pandora-pay/network/websocks"
-	"pandora-pay/settings"
-	"pandora-pay/wallet"
 )
 
 type httpServerType struct {
@@ -143,18 +139,18 @@ func (this *httpServerType) GetHttpHandler() *http.Handler {
 	return &handler
 }
 
-func NewHttpServer(chain *blockchain.Blockchain, settings *settings.Settings, mempool *mempool.Mempool, wallet *wallet.Wallet) error {
+func NewHttpServer() error {
 
-	apiStore := api_common.NewAPIStore(chain)
-	apiCommon, err := api_common.NewAPICommon(mempool, chain, wallet, apiStore)
+	apiStore := api_common.NewAPIStore()
+	apiCommon, err := api_common.NewAPICommon(apiStore)
 	if err != nil {
 		return err
 	}
 
-	apiWebsockets := api_websockets.NewWebsocketsAPI(apiStore, apiCommon, chain, settings, mempool)
-	api := api_http.NewAPI(apiStore, apiCommon, chain)
+	apiWebsockets := api_websockets.NewWebsocketsAPI(apiStore, apiCommon)
+	api := api_http.NewAPI(apiStore, apiCommon)
 
-	websocks.NewWebsockets(chain, mempool, settings, apiWebsockets.GetMap)
+	websocks.NewWebsockets(apiWebsockets.GetMap)
 
 	HttpServer = &httpServerType{
 		api,

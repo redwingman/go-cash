@@ -168,7 +168,7 @@ Output
 
 **amount** is the decrypted value.
 
-**WARNING!** The decryptor is a making brute force trying all possible balances starting from 0. If you have more than 8 decimals values, it could take even a few minutes to decrypt the balance is case it was changed.
+**WARNING!** The decrypter is a making brute force trying all possible balances starting from 0. If you have more than 8 decimals values, it could take even a few minutes to decrypt the balance is case it was changed.
 
 ### wallet/decrypt-tx
 
@@ -217,7 +217,7 @@ curl -X POST  \
 -d '{ "user": "username", "pass": "password", "data": { "payloads": [ {"sender":  "PANDDEVAAaBVqiVyecV\u003cysBwcT\u003cGRkIHPBdbHZ9hwaS4wfV4xKYAQAPLjdy",  "recipient":  "PANDDEVABjp7xeB<oGlMe5PdvIq7oGhUq3iquvERZS3<Ax6CCzqAABnVMdN",  "amount": 100 }] }, "propagate": true }' http://127.0.0.1:5232/wallet/private-transfer
 ```
 
-**WARNING!** When creating a private transfer, the balance must be decrypted for signing. The decryptor is a making brute force trying all possible balances starting from 0. If you have more than 8 decimals values, it could take even a few minutes to decrypt the balance is case it was changed.
+**WARNING!** When creating a private transfer, the balance must be decrypted for signing. The decrypter is a making brute force trying all possible balances starting from 0. If you have more than 8 decimals values, it could take even a few minutes to decrypt the balance is case it was changed.
 
 # DISCLAIMER:
 This source code is released for research purposes only, with the intent of researching and studying a decentralized p2p network protocol.

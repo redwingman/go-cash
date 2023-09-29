@@ -20,14 +20,14 @@ func (api *APICommon) GetWalletAddresses(r *http.Request, args *struct{}, reply 
 		return errors.New("Invalid User or Password")
 	}
 
-	api.wallet.Lock.RLock()
-	defer api.wallet.Lock.RUnlock()
+	wallet.Wallet.Lock.RLock()
+	defer wallet.Wallet.Lock.RUnlock()
 
-	reply.Version = api.wallet.Version
-	reply.Encrypted = api.wallet.Encryption.Encrypted
+	reply.Version = wallet.Wallet.Version
+	reply.Encrypted = wallet.Wallet.Encryption.Encrypted
 
-	reply.Addresses = make([]*wallet_address.WalletAddress, len(api.wallet.Addresses))
-	for i, addr := range api.wallet.Addresses {
+	reply.Addresses = make([]*wallet_address.WalletAddress, len(wallet.Wallet.Addresses))
+	for i, addr := range wallet.Wallet.Addresses {
 		if reply.Addresses[i], err = generics.Clone[*wallet_address.WalletAddress](addr, new(wallet_address.WalletAddress)); err != nil {
 			return
 		}

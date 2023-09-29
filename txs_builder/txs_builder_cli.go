@@ -24,6 +24,7 @@ import (
 	"pandora-pay/store"
 	"pandora-pay/store/store_db/store_db_interface"
 	"pandora-pay/txs_builder/wizard"
+	"pandora-pay/wallet"
 )
 
 func (builder *TxsBuilderType) showWarningIfNotSyncCLI() {
@@ -195,7 +196,7 @@ func (builder *TxsBuilderType) initCLI() {
 			Payloads: []*TxBuilderCreateZetherTxPayload{{}},
 		}
 
-		if _, txData.Payloads[0].Sender, _, err = builder.wallet.CliSelectAddress("Select Address to Transfer", ctx); err != nil {
+		if _, txData.Payloads[0].Sender, _, err = wallet.Wallet.CliSelectAddress("Select Address to Transfer", ctx); err != nil {
 			return
 		}
 
@@ -232,7 +233,7 @@ func (builder *TxsBuilderType) initCLI() {
 			}},
 		}
 
-		if _, txData.Payloads[0].Sender, _, err = builder.wallet.CliSelectAddress("Select Address which will create the asset", ctx); err != nil {
+		if _, txData.Payloads[0].Sender, _, err = wallet.Wallet.CliSelectAddress("Select Address which will create the asset", ctx); err != nil {
 			return
 		}
 
@@ -310,7 +311,7 @@ func (builder *TxsBuilderType) initCLI() {
 			}},
 		}
 
-		if _, txData.Payloads[0].Sender, _, err = builder.wallet.CliSelectAddress("Select Address which will increase the supply of asset", ctx); err != nil {
+		if _, txData.Payloads[0].Sender, _, err = wallet.Wallet.CliSelectAddress("Select Address which will increase the supply of asset", ctx); err != nil {
 			return
 		}
 
@@ -358,7 +359,7 @@ func (builder *TxsBuilderType) initCLI() {
 			}},
 		}
 
-		if _, txData.Payloads[0].Sender, _, err = builder.wallet.CliSelectAddress("Select Address which will fund a plain account", ctx); err != nil {
+		if _, txData.Payloads[0].Sender, _, err = wallet.Wallet.CliSelectAddress("Select Address which will fund a plain account", ctx); err != nil {
 			return
 		}
 
@@ -401,7 +402,7 @@ func (builder *TxsBuilderType) initCLI() {
 			}, {}},
 		}
 
-		if _, txData.Payloads[0].Sender, _, err = builder.wallet.CliSelectAddress("Select Address to Transfer", ctx); err != nil {
+		if _, txData.Payloads[0].Sender, _, err = wallet.Wallet.CliSelectAddress("Select Address to Transfer", ctx); err != nil {
 			return
 		}
 		txData.Payloads[1].Sender = txData.Payloads[0].Sender
@@ -484,7 +485,7 @@ func (builder *TxsBuilderType) initCLI() {
 			FeeVersion: true,
 		}
 
-		if _, txData.Sender, _, err = builder.wallet.CliSelectAddress("Select Address to Publicly Update Asset Fee Liquidity", ctx); err != nil {
+		if _, txData.Sender, _, err = wallet.Wallet.CliSelectAddress("Select Address to Publicly Update Asset Fee Liquidity", ctx); err != nil {
 			return
 		}
 

@@ -64,43 +64,43 @@ func StartMainNow() (err error) {
 	if err = address_balance_decrypter.Initialize(runtime.GOARCH != "wasm"); err != nil {
 		return
 	}
-	globals.MainEvents.BroadcastEvent("main", "address balance decryptor validator initialized")
+	globals.MainEvents.BroadcastEvent("main", "address balance decrypter validator initialized")
 
-	if app.Mempool, err = mempool.CreateMempool(); err != nil {
+	if err = mempool.Initialize(); err != nil {
 		return
 	}
 	globals.MainEvents.BroadcastEvent("main", "mempool initialized")
 
-	if app.Forging, err = forging.CreateForging(app.Mempool); err != nil {
+	if err = forging.Initialize(); err != nil {
 		return
 	}
 	globals.MainEvents.BroadcastEvent("main", "forging initialized")
 
-	if app.Chain, err = blockchain.CreateBlockchain(app.Mempool); err != nil {
+	if err = blockchain.Initialize(); err != nil {
 		return
 	}
 	globals.MainEvents.BroadcastEvent("main", "blockchain initialized")
 
-	if app.Wallet, err = wallet.CreateWallet(app.Forging, app.Mempool); err != nil {
+	if err = wallet.Initialize(); err != nil {
 		return
 	}
-	if err = app.Wallet.ProcessWalletArguments(); err != nil {
+	if err = wallet.Wallet.ProcessWalletArguments(); err != nil {
 		return
 	}
 
 	globals.MainEvents.BroadcastEvent("main", "wallet initialized")
 
-	if err = genesis.GenesisInit(app.Wallet.GetFirstAddressForDevnetGenesisAirdrop); err != nil {
+	if err = genesis.GenesisInit(wallet.Wallet.GetFirstAddressForDevnetGenesisAirdrop); err != nil {
 		return
 	}
-	if err = app.Chain.InitializeChain(); err != nil {
+	if err = blockchain.Blockchain.InitializeChain(); err != nil {
 		return
 	}
 
-	if runtime.GOARCH != "wasm" && arguments.Arguments["--balance-decryptor-disable-init"] == false {
+	if runtime.GOARCH != "wasm" && arguments.Arguments["--balance-decrypter-disable-init"] == false {
 		tableSize := 0
-		if arguments.Arguments["--balance-decryptor-table-size"] != nil {
-			if tableSize, err = strconv.Atoi(arguments.Arguments["--balance-decryptor-table-size"].(string)); err != nil {
+		if arguments.Arguments["--balance-decrypter-table-size"] != nil {
+			if tableSize, err = strconv.Atoi(arguments.Arguments["--balance-decrypter-table-size"].(string)); err != nil {
 				return
 			}
 			tableSize = 1 << tableSize
@@ -114,28 +114,28 @@ func StartMainNow() (err error) {
 		}()
 	}
 
-	app.Wallet.InitializeWallet(app.Chain.UpdateNewChainUpdate)
-	if err = app.Wallet.StartWallet(); err != nil {
+	wallet.Wallet.InitializeWallet(blockchain.Blockchain.UpdateNewChainUpdate)
+	if err = wallet.Wallet.StartWallet(); err != nil {
 		return
 	}
 
-	if app.Settings, err = settings.SettingsInit(); err != nil {
+	if err = settings.Initialize(); err != nil {
 		return
 	}
 	globals.MainEvents.BroadcastEvent("main", "settings initialized")
 
-	if err = txs_builder.TxsBuilderInit(app.Wallet, app.Mempool); err != nil {
+	if err = txs_builder.Initialize(); err != nil {
 		return
 	}
 	globals.MainEvents.BroadcastEvent("main", "transactions builder initialized")
 
-	app.Forging.InitializeForging(txs_builder.TxsBuilder.CreateForgingTransactions, app.Chain.NextBlockCreatedCn, app.Chain.UpdateNewChainUpdate, app.Chain.ForgingSolutionCn)
+	forging.Forging.InitializeForging(txs_builder.TxsBuilder.CreateForgingTransactions, blockchain.Blockchain.NextBlockCreatedCn, blockchain.Blockchain.UpdateNewChainUpdate, blockchain.Blockchain.ForgingSolutionCn)
 
 	if config_forging.FORGING_ENABLED {
-		app.Forging.StartForging()
+		forging.Forging.StartForging()
 	}
 
-	app.Chain.InitForging()
+	blockchain.Blockchain.InitForging()
 
 	if arguments.Arguments["--exit"] == true {
 		os.Exit(1)
@@ -143,17 +143,17 @@ func StartMainNow() (err error) {
 	}
 
 	if arguments.Arguments["--run-testnet-script"] == true {
-		if err = testnet.TestnetInit(app.Wallet, app.Mempool, app.Chain); err != nil {
+		if err = testnet.Initialize(); err != nil {
 			return
 		}
 	}
 
-	if err = network.NewNetwork(app.Settings, app.Chain, app.Mempool, app.Wallet); err != nil {
+	if err = network.NewNetwork(); err != nil {
 		return
 	}
 	globals.MainEvents.BroadcastEvent("main", "network initialized")
 
-	chain_network.InitChainNetwork(app.Chain, app.Mempool)
+	chain_network.Initialize()
 
 	gui.GUI.Log("Main Loop")
 	globals.MainEvents.BroadcastEvent("main", "initialized")

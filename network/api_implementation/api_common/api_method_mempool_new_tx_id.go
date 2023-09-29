@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"pandora-pay/blockchain"
 	"pandora-pay/blockchain/transactions/transaction"
 	"pandora-pay/helpers/advanced_buffers"
+	"pandora-pay/mempool"
 	"pandora-pay/network/websocks/connection"
 	"pandora-pay/txs_validator"
 )
@@ -17,7 +19,7 @@ func (api *APICommon) mempoolNewTxIdProcess(conn *connection.AdvancedConnection,
 	}
 	hashStr := string(hash)
 
-	if api.mempool.Txs.Exists(hashStr) {
+	if mempool.Mempool.Txs.Exists(hashStr) {
 		(*reply).Result = true
 		return
 	}
@@ -68,7 +70,7 @@ func (api *APICommon) mempoolNewTxIdProcess(conn *connection.AdvancedConnection,
 		return
 	}
 
-	if err = api.mempool.AddTxToMempool(tx, api.chain.GetChainData().Height, false, true, false, conn.UUID, context.Background()); err != nil {
+	if err = mempool.Mempool.AddTxToMempool(tx, blockchain.Blockchain.GetChainData().Height, false, true, false, conn.UUID, context.Background()); err != nil {
 		return
 	}
 

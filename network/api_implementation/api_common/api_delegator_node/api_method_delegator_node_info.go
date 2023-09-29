@@ -3,6 +3,7 @@ package api_delegator_node
 import (
 	"net/http"
 	"pandora-pay/config/config_nodes"
+	"pandora-pay/wallet"
 	"sync/atomic"
 )
 
@@ -14,7 +15,7 @@ type ApiDelegatorNodeInfoReply struct {
 
 func (api *DelegatorNode) GetDelegatorNodeInfo(r *http.Request, args *struct{}, reply *ApiDelegatorNodeInfoReply) error {
 	reply.MaximumAllowed = config_nodes.DELEGATES_MAXIMUM
-	reply.DelegatesCount = api.wallet.GetDelegatesCount()
+	reply.DelegatesCount = wallet.Wallet.GetDelegatesCount()
 	reply.Blocks = atomic.LoadUint64(&api.chainHeight)
 	return nil
 }

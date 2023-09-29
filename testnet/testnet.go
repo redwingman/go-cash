@@ -30,16 +30,13 @@ import (
 	"time"
 )
 
-type TestnetType struct {
-	wallet  *wallet.Wallet
-	mempool *mempool.Mempool
-	chain   *blockchain.Blockchain
-	nodes   uint64
+type testnet struct {
+	nodes uint64
 }
 
-var Testnet *TestnetType
+var Testnet *testnet
 
-func (testnet *TestnetType) testnetGetZetherRingConfiguration(payload *txs_builder.TxBuilderCreateZetherTxPayload) *txs_builder.TxBuilderCreateZetherTxPayload {
+func (self *testnet) testnetGetZetherRingConfiguration(payload *txs_builder.TxBuilderCreateZetherTxPayload) *txs_builder.TxBuilderCreateZetherTxPayload {
 	payload.RingSize = -1
 	payload.RingConfiguration = &txs_builder.ZetherRingConfiguration{&txs_builder.ZetherSenderRingType{false, false, []string{}, 0}, &txs_builder.ZetherRecipientRingType{false, false, nil, -1}}
 	if config.LIGHT_COMPUTATIONS {
@@ -48,24 +45,24 @@ func (testnet *TestnetType) testnetGetZetherRingConfiguration(payload *txs_build
 	return payload
 }
 
-func (testnet *TestnetType) testnetCreateTransfersNewWallets(blockHeight uint64, ctx context.Context) (tx *transaction.Transaction, err error) {
+func (self *testnet) testnetCreateTransfersNewWallets(blockHeight uint64, ctx context.Context) (tx *transaction.Transaction, err error) {
 
 	txData := &txs_builder.TxBuilderCreateZetherTxData{
 		Payloads: []*txs_builder.TxBuilderCreateZetherTxPayload{},
 	}
 
-	for i := uint64(0); i < testnet.nodes; i++ {
+	for i := uint64(0); i < self.nodes; i++ {
 
 		var addrSender, addrRecipient *wallet_address.WalletAddress
-		if addrSender, err = testnet.wallet.GetWalletAddress(1, true); err != nil {
+		if addrSender, err = wallet.Wallet.GetWalletAddress(1, true); err != nil {
 			return
 		}
 
-		if addrRecipient, err = testnet.wallet.GetWalletAddress(int(i+1), true); err != nil {
+		if addrRecipient, err = wallet.Wallet.GetWalletAddress(int(i+1), true); err != nil {
 			return
 		}
 
-		txData.Payloads = append(txData.Payloads, testnet.testnetGetZetherRingConfiguration(&txs_builder.TxBuilderCreateZetherTxPayload{
+		txData.Payloads = append(txData.Payloads, self.testnetGetZetherRingConfiguration(&txs_builder.TxBuilderCreateZetherTxPayload{
 			txs_builder_zether_helper.TxsBuilderZetherTxPayloadBase{
 				addrSender.AddressEncoded,
 				addrRecipient.AddressEncoded,
@@ -86,16 +83,16 @@ func (testnet *TestnetType) testnetCreateTransfersNewWallets(blockHeight uint64,
 	return
 }
 
-func (testnet *TestnetType) testnetCreateClaimTx(senderAddr *wallet_address.WalletAddress, recipientAddressWalletIndex int, sendAmount uint64, ctx context.Context) (tx *transaction.Transaction, err error) {
+func (self *testnet) testnetCreateClaimTx(senderAddr *wallet_address.WalletAddress, recipientAddressWalletIndex int, sendAmount uint64, ctx context.Context) (tx *transaction.Transaction, err error) {
 
 	var addrRecipient *wallet_address.WalletAddress
 
-	if addrRecipient, err = testnet.wallet.GetWalletAddress(recipientAddressWalletIndex, true); err != nil {
+	if addrRecipient, err = wallet.Wallet.GetWalletAddress(recipientAddressWalletIndex, true); err != nil {
 		return
 	}
 
 	txData := &txs_builder.TxBuilderCreateZetherTxData{
-		Payloads: []*txs_builder.TxBuilderCreateZetherTxPayload{testnet.testnetGetZetherRingConfiguration(&txs_builder.TxBuilderCreateZetherTxPayload{
+		Payloads: []*txs_builder.TxBuilderCreateZetherTxPayload{self.testnetGetZetherRingConfiguration(&txs_builder.TxBuilderCreateZetherTxPayload{
 			txs_builder_zether_helper.TxsBuilderZetherTxPayloadBase{
 				senderAddr.AddressEncoded,
 				addrRecipient.AddressRegistrationEncoded,
@@ -117,7 +114,7 @@ func (testnet *TestnetType) testnetCreateClaimTx(senderAddr *wallet_address.Wall
 	return
 }
 
-func (testnet *TestnetType) testnetCreateTransfers(senderAddr *wallet_address.WalletAddress, amount uint64, ctx context.Context) (tx *transaction.Transaction, err error) {
+func (self *testnet) testnetCreateTransfers(senderAddr *wallet_address.WalletAddress, amount uint64, ctx context.Context) (tx *transaction.Transaction, err error) {
 
 	select {
 	case <-ctx.Done():
@@ -138,7 +135,7 @@ func (testnet *TestnetType) testnetCreateTransfers(senderAddr *wallet_address.Wa
 
 	txData := &txs_builder.TxBuilderCreateZetherTxData{
 		Payloads: []*txs_builder.TxBuilderCreateZetherTxPayload{
-			testnet.testnetGetZetherRingConfiguration(&txs_builder.TxBuilderCreateZetherTxPayload{
+			self.testnetGetZetherRingConfiguration(&txs_builder.TxBuilderCreateZetherTxPayload{
 				txs_builder_zether_helper.TxsBuilderZetherTxPayloadBase{
 					senderAddr.AddressEncoded,
 					addr.EncodeAddr(),
@@ -159,16 +156,16 @@ func (testnet *TestnetType) testnetCreateTransfers(senderAddr *wallet_address.Wa
 	return
 }
 
-func (testnet *TestnetType) run() {
+func (self *testnet) run() {
 
-	updateChannel := testnet.chain.UpdateNewChainDataUpdate.AddListener()
-	defer testnet.chain.UpdateNewChainDataUpdate.RemoveChannel(updateChannel)
+	updateChannel := blockchain.Blockchain.UpdateNewChainDataUpdate.AddListener()
+	defer blockchain.Blockchain.UpdateNewChainDataUpdate.RemoveChannel(updateChannel)
 
 	creatingTransactions := abool.New()
 
 	for i := uint64(0); i < 10; i++ {
-		if uint64(testnet.wallet.GetAddressesCount()) <= i+1 {
-			if _, err := testnet.wallet.AddNewAddress(true, "Testnet wallet", false, false, true); err != nil {
+		if uint64(wallet.Wallet.GetAddressesCount()) <= i+1 {
+			if _, err := wallet.Wallet.AddNewAddress(true, "Testnet wallet", false, false, true); err != nil {
 				return
 			}
 		}
@@ -184,7 +181,7 @@ func (testnet *TestnetType) run() {
 			return
 		}
 
-		syncTime := testnet.chain.Sync.GetSyncTime()
+		syncTime := blockchain.Blockchain.Sync.GetSyncTime()
 
 		blockHeight := chainData.Update.Height
 		blockTimestamp := chainData.Update.Timestamp
@@ -197,7 +194,7 @@ func (testnet *TestnetType) run() {
 			if err := func() (err error) {
 
 				if blockHeight == 100 {
-					if _, err = testnet.testnetCreateTransfersNewWallets(blockHeight, ctx); err != nil {
+					if _, err = self.testnetCreateTransfersNewWallets(blockHeight, ctx); err != nil {
 						return
 					}
 				}
@@ -212,11 +209,11 @@ func (testnet *TestnetType) run() {
 					defer creatingTransactions.UnSet()
 
 					var addr, tempAddr *wallet_address.WalletAddress
-					addr, _ = testnet.wallet.GetFirstStakedAddress(true)
+					addr, _ = wallet.Wallet.GetFirstStakedAddress(true)
 
 					addressesList := []*wallet_address.WalletAddress{}
 					for i := 0; i < 5; i++ {
-						if tempAddr, err = testnet.wallet.GetWalletAddress(i, true); err != nil {
+						if tempAddr, err = wallet.Wallet.GetWalletAddress(i, true); err != nil {
 							return
 						}
 						addressesList = append(addressesList, tempAddr)
@@ -263,7 +260,7 @@ func (testnet *TestnetType) run() {
 
 					for k, v := range accMap {
 						if v.account != nil {
-							if balances[k], err = testnet.wallet.DecryptBalance(addressesList[v.index], v.account.Balance.Amount.Serialize(), config_coins.NATIVE_ASSET_FULL, false, 0, true, ctx, func(string) {}); err != nil {
+							if balances[k], err = wallet.Wallet.DecryptBalance(addressesList[v.index], v.account.Balance.Amount.Serialize(), config_coins.NATIVE_ASSET_FULL, false, 0, true, ctx, func(string) {}); err != nil {
 								return
 							}
 						}
@@ -275,7 +272,7 @@ func (testnet *TestnetType) run() {
 
 					if stakingAmount > config_coins.ConvertToUnitsUint64Forced(50000) {
 						over := stakingAmount - config_coins.ConvertToUnitsUint64Forced(40000)
-						testnet.testnetCreateTransfers(addr, over, ctx)
+						self.testnetCreateTransfers(addr, over, ctx)
 
 						stakingAmount = generics.Max(0, config_coins.ConvertToUnitsUint64Forced(40000))
 					}
@@ -284,7 +281,7 @@ func (testnet *TestnetType) run() {
 
 						if stakingAmount > config_coins.ConvertToUnitsUint64Forced(20000) {
 							over := stakingAmount - config_coins.ConvertToUnitsUint64Forced(10000)
-							if !testnet.mempool.ExistsTxZetherVersion(addr.PublicKey, transaction_zether_payload_script.SCRIPT_TRANSFER) {
+							if !mempool.Mempool.ExistsTxZetherVersion(addr.PublicKey, transaction_zether_payload_script.SCRIPT_TRANSFER) {
 								for i := 0; i < 5; i++ {
 
 									if bytes.Equal(addr.PublicKey, addressesList[i].PublicKey) {
@@ -293,7 +290,7 @@ func (testnet *TestnetType) run() {
 
 									if balances[string(addressesList[i].PublicKey)] < config_coins.ConvertToUnitsUint64Forced(10000) {
 										amount := generics.Min(over/5, config_coins.ConvertToUnitsUint64Forced(10000)-balances[string(addressesList[i].PublicKey)])
-										testnet.testnetCreateClaimTx(addr, i, amount, ctx)
+										self.testnetCreateClaimTx(addr, i, amount, ctx)
 										time.Sleep(time.Millisecond * 1000)
 									}
 
@@ -307,7 +304,7 @@ func (testnet *TestnetType) run() {
 								continue
 							}
 
-							testnet.testnetCreateTransfers(addressesList[i], 0, ctx)
+							self.testnetCreateTransfers(addressesList[i], 0, ctx)
 							time.Sleep(time.Millisecond * 5000)
 						}
 					}
@@ -326,12 +323,9 @@ func (testnet *TestnetType) run() {
 
 }
 
-func TestnetInit(wallet *wallet.Wallet, mempool *mempool.Mempool, chain *blockchain.Blockchain) error {
+func Initialize() error {
 
-	Testnet = &TestnetType{
-		wallet,
-		mempool,
-		chain,
+	Testnet = &testnet{
 		uint64(config.CPU_THREADS),
 	}
 

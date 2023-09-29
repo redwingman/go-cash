@@ -2,17 +2,13 @@ package network
 
 import (
 	"context"
-	"pandora-pay/blockchain"
 	"pandora-pay/config"
 	"pandora-pay/helpers/msgpack"
-	"pandora-pay/mempool"
 	"pandora-pay/network/connected_nodes"
 	"pandora-pay/network/known_nodes"
 	"pandora-pay/network/server/node_tcp"
 	"pandora-pay/network/websocks"
 	"pandora-pay/network/websocks/connection/advanced_connection_types"
-	"pandora-pay/settings"
-	"pandora-pay/wallet"
 	"time"
 )
 
@@ -92,7 +88,7 @@ func SendJSONAwaitAnswer[T any](name []byte, data any, ctxParent context.Context
 	}
 }
 
-func NewNetwork(settings *settings.Settings, chain *blockchain.Blockchain, mempool *mempool.Mempool, wallet *wallet.Wallet) error {
+func NewNetwork() error {
 
 	list := make([]string, len(config.NETWORK_SELECTED_SEEDS))
 	for i, seed := range config.NETWORK_SELECTED_SEEDS {
@@ -102,7 +98,7 @@ func NewNetwork(settings *settings.Settings, chain *blockchain.Blockchain, mempo
 		return err
 	}
 
-	if err := node_tcp.NewTcpServer(settings, chain, mempool, wallet); err != nil {
+	if err := node_tcp.NewTcpServer(); err != nil {
 		return err
 	}
 

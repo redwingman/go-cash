@@ -3,10 +3,12 @@ package api_common
 import (
 	"context"
 	"net/http"
+	"pandora-pay/blockchain"
 	"pandora-pay/blockchain/transactions/transaction"
 	"pandora-pay/cryptography"
 	"pandora-pay/helpers"
 	"pandora-pay/helpers/advanced_buffers"
+	"pandora-pay/mempool"
 	"pandora-pay/network/websocks/connection/advanced_connection_types"
 	"pandora-pay/txs_validator"
 )
@@ -26,7 +28,7 @@ func (api *APICommon) mempoolNewTx(args *APIMempoolNewTxRequest, reply *APIMempo
 	//it needs to compute  tx.Bloom.HashStrx
 	hashStr := string(hash)
 
-	if api.mempool.Txs.Exists(hashStr) {
+	if mempool.Mempool.Txs.Exists(hashStr) {
 		(*reply).Result = true
 		return nil
 	}
@@ -58,7 +60,7 @@ func (api *APICommon) mempoolNewTx(args *APIMempoolNewTxRequest, reply *APIMempo
 		return
 	}
 
-	if err = api.mempool.AddTxToMempool(tx, api.chain.GetChainData().Height, false, true, false, exceptSocketUUID, context.Background()); err != nil {
+	if err = mempool.Mempool.AddTxToMempool(tx, blockchain.Blockchain.GetChainData().Height, false, true, false, exceptSocketUUID, context.Background()); err != nil {
 		return
 	}
 

@@ -2,6 +2,7 @@ package api_common
 
 import (
 	"net/http"
+	"pandora-pay/mempool"
 	"pandora-pay/network/api_implementation/api_common/api_types"
 )
 
@@ -20,7 +21,7 @@ func (api *APICommon) GetAccountMempool(r *http.Request, args *APIAccountMempool
 		return err
 	}
 
-	txs := api.mempool.Txs.GetAccountTxs(publicKey)
+	txs := mempool.Mempool.Txs.GetAccountTxs(publicKey)
 
 	if txs != nil {
 		reply.List = make([][]byte, len(txs))

@@ -5,6 +5,7 @@ import (
 	"pandora-pay/config"
 	"pandora-pay/helpers"
 	"pandora-pay/helpers/generics"
+	"pandora-pay/mempool"
 )
 
 type APIMempoolRequest struct {
@@ -21,7 +22,7 @@ type APIMempoolReply struct {
 
 func (api *APICommon) GetMempool(r *http.Request, args *APIMempoolRequest, reply *APIMempoolReply) error {
 
-	transactions, finalChainHash := api.mempool.GetNextTransactionsToInclude(args.ChainHash)
+	transactions, finalChainHash := mempool.Mempool.GetNextTransactionsToInclude(args.ChainHash)
 
 	if args.Count == 0 {
 		args.Count = config.API_MEMPOOL_MAX_TRANSACTIONS

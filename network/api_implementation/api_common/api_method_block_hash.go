@@ -2,6 +2,7 @@ package api_common
 
 import (
 	"net/http"
+	"pandora-pay/blockchain"
 )
 
 type APIBlockHashRequest struct {
@@ -13,6 +14,6 @@ type APIBlockHashReply struct {
 }
 
 func (api *APICommon) GetBlockHash(r *http.Request, args *APIBlockHashRequest, reply *APIBlockHashReply) (err error) {
-	reply.Hash, err = api.ApiStore.chain.OpenLoadBlockHash(args.Height)
+	reply.Hash, err = blockchain.Blockchain.OpenLoadBlockHash(args.Height)
 	return
 }

@@ -27,31 +27,33 @@ type mempoolTx struct {
 	ChainHeight uint64                   `json:"chainHeight" msgpack:"chainHeight"`
 }
 
-type Mempool struct {
-	result                    *generics.Value[*MempoolResult]
+type mempool struct {
+	result                    *generics.Value[*mempoolResult]
 	SuspendProcessingCn       chan struct{}
 	ContinueProcessingCn      chan ContinueProcessingType
 	newWorkCn                 chan *mempoolWork
-	addTransactionCn          chan *MempoolWorkerAddTx
-	removeTransactionsCn      chan *MempoolWorkerRemoveTxs
-	insertTransactionsCn      chan *MempoolWorkerInsertTxs
-	Txs                       *MempoolTxs
+	addTransactionCn          chan *mempoolWorkerAddTx
+	removeTransactionsCn      chan *mempoolWorkerRemoveTxs
+	insertTransactionsCn      chan *mempoolWorkerInsertTxs
+	Txs                       *mempoolTxs
 	OnBroadcastNewTransaction func([]*transaction.Transaction, bool, bool, advanced_connection_types.UUID, context.Context) []error
 }
 
-func (mempool *Mempool) ContinueProcessing(continueProcessingType ContinueProcessingType) {
-	mempool.ContinueProcessingCn <- continueProcessingType
+var Mempool *mempool
+
+func (self *mempool) ContinueProcessing(continueProcessingType ContinueProcessingType) {
+	self.ContinueProcessingCn <- continueProcessingType
 }
 
-func (mempool *Mempool) RemoveInsertedTxsFromBlockchain(txs []string) bool {
+func (self *mempool) RemoveInsertedTxsFromBlockchain(txs []string) bool {
 	answerCn := make(chan bool)
-	mempool.removeTransactionsCn <- &MempoolWorkerRemoveTxs{txs, answerCn}
+	self.removeTransactionsCn <- &mempoolWorkerRemoveTxs{txs, answerCn}
 	return <-answerCn
 }
 
-func (mempool *Mempool) InsertRemovedTxsFromBlockchain(txs []*transaction.Transaction, height uint64) bool {
+func (self *mempool) InsertRemovedTxsFromBlockchain(txs []*transaction.Transaction, height uint64) bool {
 
-	finalTxs, _ := mempool.processTxsToMempool(txs, height, context.Background())
+	finalTxs, _ := self.processTxsToMempool(txs, height, context.Background())
 
 	insertTxs := make([]*mempoolTx, len(finalTxs))
 	for i, it := range finalTxs {
@@ -61,17 +63,17 @@ func (mempool *Mempool) InsertRemovedTxsFromBlockchain(txs []*transaction.Transa
 	}
 
 	answerCn := make(chan bool)
-	mempool.insertTransactionsCn <- &MempoolWorkerInsertTxs{insertTxs, answerCn}
+	self.insertTransactionsCn <- &mempoolWorkerInsertTxs{insertTxs, answerCn}
 	return <-answerCn
 
 }
 
-func (mempool *Mempool) AddTxToMempool(tx *transaction.Transaction, height uint64, justCreated bool, awaitAnswer, awaitBroadcasting bool, exceptSocketUUID advanced_connection_types.UUID, ctx context.Context) error {
-	result := mempool.AddTxsToMempool([]*transaction.Transaction{tx}, height, justCreated, awaitAnswer, awaitBroadcasting, exceptSocketUUID, ctx)
+func (self *mempool) AddTxToMempool(tx *transaction.Transaction, height uint64, justCreated bool, awaitAnswer, awaitBroadcasting bool, exceptSocketUUID advanced_connection_types.UUID, ctx context.Context) error {
+	result := self.AddTxsToMempool([]*transaction.Transaction{tx}, height, justCreated, awaitAnswer, awaitBroadcasting, exceptSocketUUID, ctx)
 	return result[0]
 }
 
-func (mempool *Mempool) processTxsToMempool(txs []*transaction.Transaction, height uint64, ctx context.Context) (finalTxs []*mempoolTx, errs []error) {
+func (self *mempool) processTxsToMempool(txs []*transaction.Transaction, height uint64, ctx context.Context) (finalTxs []*mempoolTx, errs []error) {
 
 	finalTxs = make([]*mempoolTx, len(txs))
 	errs = make([]error, len(txs))
@@ -98,7 +100,7 @@ func (mempool *Mempool) processTxsToMempool(txs []*transaction.Transaction, heig
 			return
 		}
 
-		if mempool.Txs.Exists(tx.Bloom.HashStr) {
+		if self.Txs.Exists(tx.Bloom.HashStr) {
 			continue
 		}
 
@@ -151,9 +153,9 @@ func (mempool *Mempool) processTxsToMempool(txs []*transaction.Transaction, heig
 	return
 }
 
-func (mempool *Mempool) AddTxsToMempool(txs []*transaction.Transaction, height uint64, justCreated, awaitAnswer, awaitBroadcasting bool, exceptSocketUUID advanced_connection_types.UUID, ctx context.Context) []error {
+func (self *mempool) AddTxsToMempool(txs []*transaction.Transaction, height uint64, justCreated, awaitAnswer, awaitBroadcasting bool, exceptSocketUUID advanced_connection_types.UUID, ctx context.Context) []error {
 
-	finalTxs, errs := mempool.processTxsToMempool(txs, height, ctx)
+	finalTxs, errs := self.processTxsToMempool(txs, height, ctx)
 
 	//making sure that the transaction is not inserted twice
 	if runtime.GOARCH != "wasm" {
@@ -170,10 +172,10 @@ func (mempool *Mempool) AddTxsToMempool(txs []*transaction.Transaction, height u
 
 				if awaitAnswer {
 					answerCn := make(chan error)
-					mempool.addTransactionCn <- &MempoolWorkerAddTx{finalTx, answerCn}
+					self.addTransactionCn <- &mempoolWorkerAddTx{finalTx, answerCn}
 					errorResult = <-answerCn
 				} else {
-					mempool.addTransactionCn <- &MempoolWorkerAddTx{finalTx, nil}
+					self.addTransactionCn <- &mempoolWorkerAddTx{finalTx, nil}
 				}
 
 				if errorResult != nil {
@@ -194,7 +196,7 @@ func (mempool *Mempool) AddTxsToMempool(txs []*transaction.Transaction, height u
 			}
 		}
 
-		errors2 := mempool.OnBroadcastNewTransaction(broadcastTxs, justCreated, awaitBroadcasting, exceptSocketUUID, ctx)
+		errors2 := self.OnBroadcastNewTransaction(broadcastTxs, justCreated, awaitBroadcasting, exceptSocketUUID, ctx)
 		for i, err := range errors2 {
 			if err != nil {
 				errs[i] = err
@@ -208,16 +210,16 @@ func (mempool *Mempool) AddTxsToMempool(txs []*transaction.Transaction, height u
 }
 
 // reset the forger
-func (mempool *Mempool) UpdateWork(hash []byte, height uint64) {
+func (self *mempool) UpdateWork(hash []byte, height uint64) {
 
-	result := &MempoolResult{
+	result := &mempoolResult{
 		txs:         &generics.Value[[]*mempoolTx]{}, //, appendOnly
 		totalSize:   0,
 		chainHash:   hash,
 		chainHeight: height,
 	}
 	result.txs.Store([]*mempoolTx{})
-	mempool.result.Store(result)
+	self.result.Store(result)
 
 	newWork := &mempoolWork{
 		chainHash:   hash,
@@ -225,36 +227,37 @@ func (mempool *Mempool) UpdateWork(hash []byte, height uint64) {
 		result:      result,
 	}
 
-	mempool.newWorkCn <- newWork
+	self.newWorkCn <- newWork
 }
 
-func (mempool *Mempool) ContinueWork() {
+func (self *mempool) ContinueWork() {
 	newWork := &mempoolWork{}
-	mempool.newWorkCn <- newWork
+	self.newWorkCn <- newWork
 }
 
-func CreateMempool() (*Mempool, error) {
+func Initialize() (err error) {
 
 	gui.GUI.Log("Mempool init...")
 
-	mempool := &Mempool{
-		&generics.Value[*MempoolResult]{},
+	Mempool = &mempool{
+		&generics.Value[*mempoolResult]{},
 		make(chan struct{}),
 		make(chan ContinueProcessingType),
 		make(chan *mempoolWork),
-		make(chan *MempoolWorkerAddTx, 1000),
-		make(chan *MempoolWorkerRemoveTxs),
-		make(chan *MempoolWorkerInsertTxs),
+		make(chan *mempoolWorkerAddTx, 1000),
+		make(chan *mempoolWorkerRemoveTxs),
+		make(chan *mempoolWorkerInsertTxs),
 		createMempoolTxs(),
 		nil,
 	}
 
 	worker := new(mempoolWorker)
 	recovery.SafeGo(func() {
-		worker.processing(mempool.newWorkCn, mempool.SuspendProcessingCn, mempool.ContinueProcessingCn, mempool.addTransactionCn, mempool.insertTransactionsCn, mempool.removeTransactionsCn, mempool.Txs)
+		worker.processing(Mempool.newWorkCn, Mempool.SuspendProcessingCn, Mempool.ContinueProcessingCn, Mempool.addTransactionCn, Mempool.insertTransactionsCn, Mempool.removeTransactionsCn, Mempool.Txs)
 	})
 
-	mempool.initCLI()
+	Mempool.initCLI()
 
-	return mempool, nil
+	return nil
+
 }

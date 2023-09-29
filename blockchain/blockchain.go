@@ -30,19 +30,16 @@ import (
 	"pandora-pay/store"
 	"pandora-pay/store/store_db/store_db_interface"
 	"pandora-pay/txs_validator"
-	"pandora-pay/wallet"
 	"strconv"
 	"sync"
 	"time"
 )
 
-type Blockchain struct {
+type blockchain struct {
 	ChainData                               *generics.Value[*BlockchainData]
 	Sync                                    *blockchain_sync.BlockchainSync
-	mempool                                 *mempool.Mempool
-	wallet                                  *wallet.Wallet
 	mutex                                   *sync.Mutex //writing mutex
-	updatesQueue                            *BlockchainUpdatesQueue
+	updatesQueue                            *blockchainUpdatesQueue
 	ForgingSolutionCn                       chan *blockchain_types.BlockchainSolution
 	UpdateNewChain                          *multicast.MulticastChannel[uint64]
 	UpdateNewChainDataUpdate                *multicast.MulticastChannel[*BlockchainDataUpdate]
@@ -52,7 +49,9 @@ type Blockchain struct {
 	NextBlockCreatedCn                      chan *forging_block_work.ForgingWork
 }
 
-func (chain *Blockchain) validateBlocks(blocksComplete []*block_complete.BlockComplete) (err error) {
+var Blockchain *blockchain
+
+func (self *blockchain) validateBlocks(blocksComplete []*block_complete.BlockComplete) (err error) {
 
 	if len(blocksComplete) == 0 {
 		return errors.New("Blocks length is ZERO")
@@ -73,17 +72,17 @@ func (chain *Blockchain) validateBlocks(blocksComplete []*block_complete.BlockCo
 	return
 }
 
-func (chain *Blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplete, calledByForging bool, exceptSocketUUID advanced_connection_types.UUID) (kernelHash []byte, err error) {
+func (self *blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplete, calledByForging bool, exceptSocketUUID advanced_connection_types.UUID) (kernelHash []byte, err error) {
 
-	if err = chain.validateBlocks(blocksComplete); err != nil {
+	if err = self.validateBlocks(blocksComplete); err != nil {
 		return
 	}
 
 	//avoid processing the same function twice
-	chain.mutex.Lock()
-	defer chain.mutex.Unlock()
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
 
-	chainData := chain.GetChainData()
+	chainData := self.GetChainData()
 
 	if calledByForging && blocksComplete[len(blocksComplete)-1].Height == chainData.Height-1 && chainData.ConsecutiveSelfForged > 0 {
 		err = errors.New("Block was already forged by a different thread")
@@ -127,7 +126,7 @@ func (chain *Blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplet
 
 	err = func() (err error) {
 
-		chain.mempool.SuspendProcessingCn <- struct{}{}
+		mempool.Mempool.SuspendProcessingCn <- struct{}{}
 
 		err = store.StoreBlockchain.DB.Update(func(writer store_db_interface.StoreDBTransactionInterface) (err error) {
 
@@ -148,7 +147,7 @@ func (chain *Blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplet
 
 				if blkComplete.Block.Height < newChainData.Height {
 					var hash []byte
-					if hash, err = chain.LoadBlockHash(writer, blkComplete.Block.Height); err != nil {
+					if hash, err = self.LoadBlockHash(writer, blkComplete.Block.Height); err != nil {
 						return
 					}
 					if bytes.Equal(hash, blkComplete.Block.Bloom.Hash) {
@@ -173,7 +172,7 @@ func (chain *Blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplet
 					copy(removedBlocksHeights[1:], removedBlocksHeights)
 					removedBlocksHeights[0] = index
 
-					if allTransactionsChanges, err = chain.removeBlockComplete(writer, index, removedTxHashes, allTransactionsChanges, dataStorage); err != nil {
+					if allTransactionsChanges, err = self.removeBlockComplete(writer, index, removedTxHashes, allTransactionsChanges, dataStorage); err != nil {
 						return
 					}
 
@@ -186,7 +185,7 @@ func (chain *Blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplet
 
 				if firstBlockComplete.Block.Height == 0 {
 					gui.GUI.Info("chain.createGenesisBlockchainData called")
-					newChainData = chain.createGenesisBlockchainData()
+					newChainData = self.createGenesisBlockchainData()
 					removedBlocksTransactionsCount = 0
 				} else {
 					removedBlocksTransactionsCount = newChainData.TransactionsCount
@@ -326,7 +325,7 @@ func (chain *Blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplet
 					//to detect if the savedBlock was done correctly
 					savedBlock = false
 
-					if allTransactionsChanges, err = chain.saveBlockComplete(writer, blkComplete, newChainData.TransactionsCount, removedTxHashes, allTransactionsChanges, dataStorage); err != nil {
+					if allTransactionsChanges, err = self.saveBlockComplete(writer, blkComplete, newChainData.TransactionsCount, removedTxHashes, allTransactionsChanges, dataStorage); err != nil {
 						return errors.New("Error saving block complete: " + err.Error())
 					}
 
@@ -396,7 +395,7 @@ func (chain *Blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplet
 
 					//remove unused blocks
 					for _, removedBlock := range removedBlocksHeights {
-						if err = chain.deleteUnusedBlocksComplete(writer, removedBlock, dataStorage); err != nil {
+						if err = self.deleteUnusedBlocksComplete(writer, removedBlock, dataStorage); err != nil {
 							panic(err)
 						}
 					}
@@ -439,7 +438,7 @@ func (chain *Blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplet
 					removeTxsInfo(writer, removedTxHashes)
 				}
 
-				if err = chain.saveBlockchainHashmaps(dataStorage); err != nil {
+				if err = self.saveBlockchainHashmaps(dataStorage); err != nil {
 					panic(err)
 				}
 
@@ -466,13 +465,13 @@ func (chain *Blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplet
 
 	if err == nil {
 		kernelHash = newChainData.KernelHash
-		chain.ChainData.Store(newChainData)
-		chain.mempool.ContinueProcessingCn <- mempool.CONTINUE_PROCESSING_NO_ERROR
+		self.ChainData.Store(newChainData)
+		mempool.Mempool.ContinueProcessingCn <- mempool.CONTINUE_PROCESSING_NO_ERROR
 	} else {
-		chain.mempool.ContinueProcessingCn <- mempool.CONTINUE_PROCESSING_ERROR
+		mempool.Mempool.ContinueProcessingCn <- mempool.CONTINUE_PROCESSING_ERROR
 	}
 
-	update := &BlockchainUpdate{
+	update := &blockchainUpdate{
 		err:              err,
 		calledByForging:  calledByForging,
 		exceptSocketUUID: exceptSocketUUID,
@@ -489,20 +488,45 @@ func (chain *Blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplet
 		update.allTransactionsChanges = allTransactionsChanges
 	}
 
-	chain.updatesQueue.updatesCn <- update
+	self.updatesQueue.updatesCn <- update
 
 	return
 }
 
-func CreateBlockchain(mempool *mempool.Mempool) (*Blockchain, error) {
+func (self *blockchain) InitializeChain() (err error) {
+
+	if err = self.loadBlockchain(); err != nil {
+		if err.Error() != "Chain not found" {
+			return
+		}
+		if _, err = self.init(); err != nil {
+			return
+		}
+		if err = self.saveBlockchain(); err != nil {
+			return
+		}
+	}
+
+	chainData := self.GetChainData()
+	chainData.updateChainInfo()
+
+	return
+}
+
+func (self *blockchain) Close() {
+	self.UpdateNewChainDataUpdate.CloseAll()
+	self.UpdateNewChain.CloseAll()
+	close(self.ForgingSolutionCn)
+	close(self.NextBlockCreatedCn)
+}
+
+func Initialize() error {
 
 	gui.GUI.Log("Blockchain init...")
 
-	chain := &Blockchain{
+	Blockchain = &blockchain{
 		&generics.Value[*BlockchainData]{},
 		blockchain_sync.CreateBlockchainSync(),
-		mempool,
-		nil,
 		&sync.Mutex{},
 		createBlockchainUpdatesQueue(),
 		make(chan *blockchain_types.BlockchainSolution),
@@ -514,37 +538,10 @@ func CreateBlockchain(mempool *mempool.Mempool) (*Blockchain, error) {
 		make(chan *forging_block_work.ForgingWork),
 	}
 
-	chain.updatesQueue.chain = chain
-	chain.updatesQueue.processBlockchainUpdatesQueue()
-	chain.updatesQueue.processBlockchainUpdateMempool()
-	chain.updatesQueue.processBlockchainUpdateNotifications()
+	Blockchain.updatesQueue.chain = Blockchain
+	Blockchain.updatesQueue.processBlockchainUpdatesQueue()
+	Blockchain.updatesQueue.processBlockchainUpdateMempool()
+	Blockchain.updatesQueue.processBlockchainUpdateNotifications()
 
-	return chain, nil
-}
-
-func (chain *Blockchain) InitializeChain() (err error) {
-
-	if err = chain.loadBlockchain(); err != nil {
-		if err.Error() != "Chain not found" {
-			return
-		}
-		if _, err = chain.init(); err != nil {
-			return
-		}
-		if err = chain.saveBlockchain(); err != nil {
-			return
-		}
-	}
-
-	chainData := chain.GetChainData()
-	chainData.updateChainInfo()
-
-	return
-}
-
-func (chain *Blockchain) Close() {
-	chain.UpdateNewChainDataUpdate.CloseAll()
-	chain.UpdateNewChain.CloseAll()
-	close(chain.ForgingSolutionCn)
-	close(chain.NextBlockCreatedCn)
+	return nil
 }

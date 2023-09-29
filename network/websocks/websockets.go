@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/tevino/abool"
 	"math/rand"
-	"pandora-pay/blockchain"
 	"pandora-pay/config"
 	"pandora-pay/config/globals"
 	"pandora-pay/gui"
@@ -13,7 +12,6 @@ import (
 	"pandora-pay/helpers/msgpack"
 	"pandora-pay/helpers/multicast"
 	"pandora-pay/helpers/recovery"
-	"pandora-pay/mempool"
 	"pandora-pay/network/banned_nodes"
 	"pandora-pay/network/connected_nodes"
 	"pandora-pay/network/known_nodes"
@@ -22,7 +20,6 @@ import (
 	"pandora-pay/network/websocks/connection"
 	"pandora-pay/network/websocks/connection/advanced_connection_types"
 	"pandora-pay/network/websocks/websock"
-	"pandora-pay/settings"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -41,7 +38,6 @@ type websocketsType struct {
 	UpdateSocketEventMulticast   *multicast.MulticastChannel[*SocketEvent]
 	ReadyCn                      *generics.Value[chan struct{}]
 	ReadyCnClosed                *abool.AtomicBool
-	settings                     *settings.Settings
 }
 
 var Websockets *websocketsType
@@ -257,7 +253,7 @@ func (this *websocketsType) InitializeConnection(conn *connection.AdvancedConnec
 	return nil
 }
 
-func NewWebsockets(chain *blockchain.Blockchain, mempool *mempool.Mempool, settings *settings.Settings, apiGetMap map[string]func(conn *connection.AdvancedConnection, values []byte) (any, error)) *websocketsType {
+func NewWebsockets(apiGetMap map[string]func(conn *connection.AdvancedConnection, values []byte) (any, error)) *websocketsType {
 
 	Websockets = &websocketsType{
 		apiGetMap,
@@ -266,11 +262,10 @@ func NewWebsockets(chain *blockchain.Blockchain, mempool *mempool.Mempool, setti
 		multicast.NewMulticastChannel[*SocketEvent](),
 		&generics.Value[chan struct{}]{},
 		abool.NewBool(false),
-		settings,
 	}
 
 	Websockets.ReadyCn.Store(make(chan struct{}))
-	Websockets.subscriptions = newWebsocketSubscriptions(chain, mempool)
+	Websockets.subscriptions = newWebsocketSubscriptions()
 
 	recovery.SafeGo(func() {
 		for {

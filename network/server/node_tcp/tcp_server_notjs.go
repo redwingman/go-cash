@@ -11,17 +11,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"pandora-pay/blockchain"
 	"pandora-pay/config"
 	"pandora-pay/config/arguments"
 	"pandora-pay/gui"
 	"pandora-pay/helpers/recovery"
-	"pandora-pay/mempool"
 	"pandora-pay/network/banned_nodes"
 	"pandora-pay/network/network_config"
 	"pandora-pay/network/server/node_http"
-	"pandora-pay/settings"
-	"pandora-pay/wallet"
 	"path"
 	"strconv"
 	"time"
@@ -36,7 +32,7 @@ type tcpServerType struct {
 
 var TcpServer *tcpServerType
 
-func NewTcpServer(settings *settings.Settings, chain *blockchain.Blockchain, mempool *mempool.Mempool, wallet *wallet.Wallet) error {
+func NewTcpServer() error {
 
 	TcpServer = &tcpServerType{}
 
@@ -172,7 +168,7 @@ func NewTcpServer(settings *settings.Settings, chain *blockchain.Blockchain, mem
 
 	gui.GUI.InfoUpdate("TCP", address+":"+port)
 
-	if err = node_http.NewHttpServer(chain, settings, mempool, wallet); err != nil {
+	if err = node_http.NewHttpServer(); err != nil {
 		return err
 	}
 

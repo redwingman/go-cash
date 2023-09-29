@@ -24,20 +24,21 @@ import (
 	"pandora-pay/helpers"
 	"pandora-pay/helpers/advanced_buffers"
 	"pandora-pay/helpers/recovery"
+	"pandora-pay/mempool"
 	"pandora-pay/network/websocks/connection/advanced_connection_types"
 	"pandora-pay/store"
 	"pandora-pay/store/store_db/store_db_interface"
 )
 
-func (chain *Blockchain) GetChainData() *BlockchainData {
-	return chain.ChainData.Load()
+func (self *blockchain) GetChainData() *BlockchainData {
+	return self.ChainData.Load()
 }
 
-func (chain *Blockchain) GetChainDataUpdate() *BlockchainDataUpdate {
-	return &BlockchainDataUpdate{chain.ChainData.Load(), chain.Sync.GetSyncData()}
+func (self *blockchain) GetChainDataUpdate() *BlockchainDataUpdate {
+	return &BlockchainDataUpdate{self.ChainData.Load(), self.Sync.GetSyncData()}
 }
 
-func (chain *Blockchain) createGenesisBlockchainData() *BlockchainData {
+func (self *blockchain) createGenesisBlockchainData() *BlockchainData {
 	return &BlockchainData{
 		helpers.CloneBytes(genesis.GenesisData.Hash),
 		helpers.CloneBytes(genesis.GenesisData.Hash),
@@ -55,7 +56,7 @@ func (chain *Blockchain) createGenesisBlockchainData() *BlockchainData {
 	}
 }
 
-func (chain *Blockchain) initializeNewChain(chainData *BlockchainData, dataStorage *data_storage.DataStorage) (err error) {
+func (self *blockchain) initializeNewChain(chainData *BlockchainData, dataStorage *data_storage.DataStorage) (err error) {
 
 	gui.GUI.Info("Initializing New Chain")
 
@@ -135,16 +136,16 @@ func (chain *Blockchain) initializeNewChain(chainData *BlockchainData, dataStora
 	return
 }
 
-func (chain *Blockchain) init() (*BlockchainData, error) {
+func (self *blockchain) init() (*BlockchainData, error) {
 
-	chainData := chain.createGenesisBlockchainData()
+	chainData := self.createGenesisBlockchainData()
 
 	if err := store.StoreBlockchain.DB.Update(func(writer store_db_interface.StoreDBTransactionInterface) (err error) {
 
 		dataStorage := data_storage.NewDataStorage(writer)
 
 		if config.NODE_CONSENSUS == config.NODE_CONSENSUS_TYPE_FULL {
-			if err = chain.initializeNewChain(chainData, dataStorage); err != nil {
+			if err = self.initializeNewChain(chainData, dataStorage); err != nil {
 				return
 			}
 		}
@@ -161,20 +162,20 @@ func (chain *Blockchain) init() (*BlockchainData, error) {
 		return nil, err
 	}
 
-	chain.ChainData.Store(chainData)
+	self.ChainData.Store(chainData)
 	return chainData, nil
 }
 
-func (chain *Blockchain) createNextBlockForForging(chainData *BlockchainData, newWork bool) {
+func (self *blockchain) createNextBlockForForging(chainData *BlockchainData, newWork bool) {
 
 	if config.NODE_CONSENSUS != config.NODE_CONSENSUS_TYPE_FULL {
 		return
 	}
 
 	if chainData == nil {
-		chain.mempool.ContinueWork()
+		mempool.Mempool.ContinueWork()
 	} else {
-		chain.mempool.UpdateWork(chainData.Hash, chainData.Height)
+		mempool.Mempool.UpdateWork(chainData.Hash, chainData.Height)
 	}
 
 	if !config_forging.FORGING_ENABLED {
@@ -184,7 +185,7 @@ func (chain *Blockchain) createNextBlockForForging(chainData *BlockchainData, ne
 	if newWork {
 
 		if chainData == nil {
-			chainData = chain.GetChainData()
+			chainData = self.GetChainData()
 		}
 
 		target := chainData.Target
@@ -225,7 +226,7 @@ func (chain *Blockchain) createNextBlockForForging(chainData *BlockchainData, ne
 		writer := advanced_buffers.NewBufferWriter()
 		blk.SerializeForForging(writer)
 
-		chain.NextBlockCreatedCn <- &forging_block_work.ForgingWork{
+		self.NextBlockCreatedCn <- &forging_block_work.ForgingWork{
 			blkComplete,
 			writer.Bytes(),
 			blkComplete.Timestamp,
@@ -238,18 +239,18 @@ func (chain *Blockchain) createNextBlockForForging(chainData *BlockchainData, ne
 
 }
 
-func (chain *Blockchain) InitForging() {
+func (self *blockchain) InitForging() {
 
 	recovery.SafeGo(func() {
 
 		for {
 
-			solution, ok := <-chain.ForgingSolutionCn
+			solution, ok := <-self.ForgingSolutionCn
 			if !ok {
 				return
 			}
 
-			kernelHash, err := chain.AddBlocks([]*block_complete.BlockComplete{solution.BlkComplete}, true, advanced_connection_types.UUID_ALL)
+			kernelHash, err := self.AddBlocks([]*block_complete.BlockComplete{solution.BlkComplete}, true, advanced_connection_types.UUID_ALL)
 
 			solution.Done <- &blockchain_types.BlockchainSolutionAnswer{
 				err,
@@ -261,15 +262,15 @@ func (chain *Blockchain) InitForging() {
 
 	recovery.SafeGo(func() {
 
-		updateNewSyncCn := chain.Sync.UpdateSyncMulticast.AddListener()
-		defer chain.Sync.UpdateSyncMulticast.RemoveChannel(updateNewSyncCn)
+		updateNewSyncCn := self.Sync.UpdateSyncMulticast.AddListener()
+		defer self.Sync.UpdateSyncMulticast.RemoveChannel(updateNewSyncCn)
 
 		for {
 
 			newSync := <-updateNewSyncCn
 
 			if newSync.Started {
-				chain.createNextBlockForForging(chain.GetChainData(), true)
+				self.createNextBlockForForging(self.GetChainData(), true)
 				break
 			}
 

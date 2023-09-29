@@ -64,7 +64,7 @@ func (api *APICommon) GetWalletDecryptTx(r *http.Request, args *APIWalletDecrypt
 		return
 	}
 
-	reply.Decrypted, err = api.wallet.DecryptTx(tx, publicKey)
+	reply.Decrypted, err = wallet.Wallet.DecryptTx(tx, publicKey)
 
 	return
 }

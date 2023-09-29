@@ -4,8 +4,8 @@ import (
 	"pandora-pay/helpers/generics"
 )
 
-//written only by the thread
-type MempoolResult struct {
+// written only by the thread
+type mempoolResult struct {
 	txs         *generics.Value[[]*mempoolTx] // Append Only
 	totalSize   uint64                        // used atomic
 	chainHash   []byte                        // 32bytes   ready only

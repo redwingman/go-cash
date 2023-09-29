@@ -14,7 +14,7 @@ import (
 	"strconv"
 )
 
-func (chain *Blockchain) OpenExistsTx(hash []byte) (exists bool, errFinal error) {
+func (self *blockchain) OpenExistsTx(hash []byte) (exists bool, errFinal error) {
 	errFinal = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
 		exists = reader.Exists("txHash:" + string(hash)) //optimized
 		return nil
@@ -22,7 +22,7 @@ func (chain *Blockchain) OpenExistsTx(hash []byte) (exists bool, errFinal error)
 	return
 }
 
-func (chain *Blockchain) OpenExistsBlock(hash []byte) (exists bool, errFinal error) {
+func (self *blockchain) OpenExistsBlock(hash []byte) (exists bool, errFinal error) {
 	errFinal = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
 		exists = reader.Exists("blockHeight_ByHash" + string(hash)) //optimized
 		return nil
@@ -30,7 +30,7 @@ func (chain *Blockchain) OpenExistsBlock(hash []byte) (exists bool, errFinal err
 	return
 }
 
-func (chain *Blockchain) OpenExistsAsset(hash []byte) (exists bool, errFinal error) {
+func (self *blockchain) OpenExistsAsset(hash []byte) (exists bool, errFinal error) {
 	errFinal = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
 		exists = reader.Exists("assets:exists:" + string(hash)) //optimized
 		return nil
@@ -38,15 +38,15 @@ func (chain *Blockchain) OpenExistsAsset(hash []byte) (exists bool, errFinal err
 	return
 }
 
-func (chain *Blockchain) OpenLoadBlockHash(blockHeight uint64) (hash []byte, errFinal error) {
+func (self *blockchain) OpenLoadBlockHash(blockHeight uint64) (hash []byte, errFinal error) {
 	errFinal = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
-		hash, err = chain.LoadBlockHash(reader, blockHeight)
+		hash, err = self.LoadBlockHash(reader, blockHeight)
 		return
 	})
 	return
 }
 
-func (chain *Blockchain) LoadBlockHash(reader store_db_interface.StoreDBTransactionInterface, height uint64) ([]byte, error) {
+func (self *blockchain) LoadBlockHash(reader store_db_interface.StoreDBTransactionInterface, height uint64) ([]byte, error) {
 	if height < 0 {
 		return nil, errors.New("Height is invalid")
 	}
@@ -58,7 +58,7 @@ func (chain *Blockchain) LoadBlockHash(reader store_db_interface.StoreDBTransact
 	return hash, nil
 }
 
-func (chain *Blockchain) deleteUnusedBlocksComplete(writer store_db_interface.StoreDBTransactionInterface, blockHeight uint64, dataStorage *data_storage.DataStorage) error {
+func (self *blockchain) deleteUnusedBlocksComplete(writer store_db_interface.StoreDBTransactionInterface, blockHeight uint64, dataStorage *data_storage.DataStorage) error {
 
 	blockHeightStr := strconv.FormatUint(blockHeight, 10)
 
@@ -73,7 +73,7 @@ func (chain *Blockchain) deleteUnusedBlocksComplete(writer store_db_interface.St
 	return nil
 }
 
-func (chain *Blockchain) removeBlockComplete(writer store_db_interface.StoreDBTransactionInterface, blockHeight uint64, removedTxHashes map[string][]byte, allTransactionsChanges []*blockchain_types.BlockchainTransactionUpdate, dataStorage *data_storage.DataStorage) (allTransactionsChanges2 []*blockchain_types.BlockchainTransactionUpdate, err error) {
+func (self *blockchain) removeBlockComplete(writer store_db_interface.StoreDBTransactionInterface, blockHeight uint64, removedTxHashes map[string][]byte, allTransactionsChanges []*blockchain_types.BlockchainTransactionUpdate, dataStorage *data_storage.DataStorage) (allTransactionsChanges2 []*blockchain_types.BlockchainTransactionUpdate, err error) {
 
 	allTransactionsChanges2 = allTransactionsChanges
 	allTransactionsChangesFinal := allTransactionsChanges
@@ -126,7 +126,7 @@ func (chain *Blockchain) removeBlockComplete(writer store_db_interface.StoreDBTr
 	return allTransactionsChangesFinal, nil
 }
 
-func (chain *Blockchain) saveBlockComplete(writer store_db_interface.StoreDBTransactionInterface, blkComplete *block_complete.BlockComplete, transactionsCount uint64, removedTxHashes map[string][]byte, allTransactionsChanges []*blockchain_types.BlockchainTransactionUpdate, dataStorage *data_storage.DataStorage) ([]*blockchain_types.BlockchainTransactionUpdate, error) {
+func (self *blockchain) saveBlockComplete(writer store_db_interface.StoreDBTransactionInterface, blkComplete *block_complete.BlockComplete, transactionsCount uint64, removedTxHashes map[string][]byte, allTransactionsChanges []*blockchain_types.BlockchainTransactionUpdate, dataStorage *data_storage.DataStorage) ([]*blockchain_types.BlockchainTransactionUpdate, error) {
 
 	allTransactionsChanges2 := allTransactionsChanges
 
@@ -193,7 +193,7 @@ func (chain *Blockchain) saveBlockComplete(writer store_db_interface.StoreDBTran
 	return allTransactionsChanges2, nil
 }
 
-func (chain *Blockchain) saveBlockchainHashmaps(dataStorage *data_storage.DataStorage) (err error) {
+func (self *blockchain) saveBlockchainHashmaps(dataStorage *data_storage.DataStorage) (err error) {
 
 	dataStorage.Rollback()
 
@@ -206,14 +206,14 @@ func (chain *Blockchain) saveBlockchainHashmaps(dataStorage *data_storage.DataSt
 	return
 }
 
-func (chain *Blockchain) saveBlockchain() error {
+func (self *blockchain) saveBlockchain() error {
 	return store.StoreBlockchain.DB.Update(func(writer store_db_interface.StoreDBTransactionInterface) error {
-		chainData := chain.GetChainData()
+		chainData := self.GetChainData()
 		return chainData.saveBlockchain(writer)
 	})
 }
 
-func (chain *Blockchain) loadBlockchain() error {
+func (self *blockchain) loadBlockchain() error {
 
 	return store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
 
@@ -227,7 +227,7 @@ func (chain *Blockchain) loadBlockchain() error {
 		if err = msgpack.Unmarshal(chainInfoData, chainData); err != nil {
 			return err
 		}
-		chain.ChainData.Store(chainData)
+		self.ChainData.Store(chainData)
 
 		return
 	})

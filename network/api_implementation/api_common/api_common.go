@@ -8,10 +8,8 @@ import (
 	"pandora-pay/config/config_nodes"
 	"pandora-pay/helpers/generics"
 	"pandora-pay/helpers/recovery"
-	"pandora-pay/mempool"
 	"pandora-pay/network/api_implementation/api_common/api_delegator_node"
 	"pandora-pay/network/api_implementation/api_common/api_faucet"
-	"pandora-pay/wallet"
 	"time"
 )
 
@@ -22,9 +20,6 @@ type mempoolNewTxReply struct {
 }
 
 type APICommon struct {
-	mempool                   *mempool.Mempool
-	chain                     *blockchain.Blockchain
-	wallet                    *wallet.Wallet
 	localChain                *generics.Value[*APIBlockchain]
 	localChainSync            *generics.Value[*blockchain_sync.BlockchainSyncData]
 	Faucet                    *api_faucet.Faucet
@@ -35,7 +30,7 @@ type APICommon struct {
 	temporaryListCreation     *generics.Value[time.Time]
 }
 
-//make sure it is safe to read
+// make sure it is safe to read
 func (api *APICommon) readLocalBlockchain(newChainDataUpdate *blockchain.BlockchainDataUpdate) {
 	newLocalChain := &APIBlockchain{
 		newChainDataUpdate.Update.Height,
@@ -54,29 +49,26 @@ func (api *APICommon) readLocalBlockchain(newChainDataUpdate *blockchain.Blockch
 	api.localChain.Store(newLocalChain)
 }
 
-//make sure it is safe to read
+// make sure it is safe to read
 func (api *APICommon) readLocalBlockchainSync(newLocalSync *blockchain_sync.BlockchainSyncData) {
 	api.localChainSync.Store(newLocalSync)
 }
 
-func NewAPICommon(mempool *mempool.Mempool, chain *blockchain.Blockchain, wallet *wallet.Wallet, apiStore *APIStore) (api *APICommon, err error) {
+func NewAPICommon(apiStore *APIStore) (api *APICommon, err error) {
 
 	var faucet *api_faucet.Faucet
 	if config.NETWORK_SELECTED == config.TEST_NET_NETWORK_BYTE || config.NETWORK_SELECTED == config.DEV_NET_NETWORK_BYTE {
-		if faucet, err = api_faucet.NewFaucet(mempool, chain, wallet); err != nil {
+		if faucet, err = api_faucet.NewFaucet(); err != nil {
 			return
 		}
 	}
 
 	var delegatorNode *api_delegator_node.DelegatorNode
 	if config_nodes.DELEGATOR_ENABLED {
-		delegatorNode = api_delegator_node.NewDelegatorNode(chain, wallet)
+		delegatorNode = api_delegator_node.NewDelegatorNode()
 	}
 
 	api = &APICommon{
-		mempool,
-		chain,
-		wallet,
 		&generics.Value[*APIBlockchain]{},
 		&generics.Value[*blockchain_sync.BlockchainSyncData]{},
 		faucet,
@@ -93,8 +85,8 @@ func NewAPICommon(mempool *mempool.Mempool, chain *blockchain.Blockchain, wallet
 
 	recovery.SafeGo(func() {
 
-		updateNewChainDataUpdateListener := api.chain.UpdateNewChainDataUpdate.AddListener()
-		defer api.chain.UpdateNewChainDataUpdate.RemoveChannel(updateNewChainDataUpdateListener)
+		updateNewChainDataUpdateListener := blockchain.Blockchain.UpdateNewChainDataUpdate.AddListener()
+		defer blockchain.Blockchain.UpdateNewChainDataUpdate.RemoveChannel(updateNewChainDataUpdateListener)
 
 		for {
 			newChainDataUpdate, ok := <-updateNewChainDataUpdateListener
@@ -111,8 +103,8 @@ func NewAPICommon(mempool *mempool.Mempool, chain *blockchain.Blockchain, wallet
 	})
 
 	recovery.SafeGo(func() {
-		updateNewSync := api.chain.Sync.UpdateSyncMulticast.AddListener()
-		defer api.chain.Sync.UpdateSyncMulticast.RemoveChannel(updateNewSync)
+		updateNewSync := blockchain.Blockchain.Sync.UpdateSyncMulticast.AddListener()
+		defer blockchain.Blockchain.Sync.UpdateSyncMulticast.RemoveChannel(updateNewSync)
 
 		for {
 			newSyncData, ok := <-updateNewSync
@@ -124,7 +116,7 @@ func NewAPICommon(mempool *mempool.Mempool, chain *blockchain.Blockchain, wallet
 		}
 	})
 
-	api.readLocalBlockchain(chain.GetChainDataUpdate())
+	api.readLocalBlockchain(blockchain.Blockchain.GetChainDataUpdate())
 
 	return
 }

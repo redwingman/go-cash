@@ -11,6 +11,7 @@ import (
 	"pandora-pay/network/api_implementation/api_common/api_types"
 	"pandora-pay/store"
 	"pandora-pay/store/store_db/store_db_interface"
+	"pandora-pay/wallet"
 	"pandora-pay/wallet/wallet_address"
 )
 
@@ -49,7 +50,7 @@ func (api *APICommon) GetWalletBalances(r *http.Request, args *APIWalletGetBalan
 
 	walletAddresses := make([]*wallet_address.WalletAddress, len(publicKeys))
 	for i, publicKey := range publicKeys {
-		if walletAddresses[i] = api.wallet.GetWalletAddressByPublicKey(publicKey, true); walletAddresses[i] == nil {
+		if walletAddresses[i] = wallet.Wallet.GetWalletAddressByPublicKey(publicKey, true); walletAddresses[i] == nil {
 			return errors.New(fmt.Sprintf("input %d doesn't exist in your wallet", i))
 		}
 	}
@@ -113,7 +114,7 @@ func (api *APICommon) GetWalletBalances(r *http.Request, args *APIWalletGetBalan
 	for i, publicKey := range publicKeys {
 		for _, data := range reply.Results[i].Balances {
 
-			if data.Amount, err = api.wallet.DecryptBalanceByPublicKey(publicKey, data.Balance, data.Asset, false, 0, true, true, nil, func(status string) {}); err != nil {
+			if data.Amount, err = wallet.Wallet.DecryptBalanceByPublicKey(publicKey, data.Balance, data.Asset, false, 0, true, true, nil, func(status string) {}); err != nil {
 				return
 			}
 		}

@@ -9,10 +9,10 @@ import (
 	"strings"
 )
 
-func (wallet *Wallet) ProcessWalletArguments() (err error) {
+func (self *wallet) ProcessWalletArguments() (err error) {
 
 	if mnemonic := arguments.Arguments["--wallet-import-secret-mnemonic"]; mnemonic != nil {
-		if err = wallet.ImportMnemonic(mnemonic.(string)); err != nil {
+		if err = self.ImportMnemonic(mnemonic.(string)); err != nil {
 			return
 		}
 	}
@@ -22,7 +22,7 @@ func (wallet *Wallet) ProcessWalletArguments() (err error) {
 		if bytes, err = base64.StdEncoding.DecodeString(entropy.(string)); err != nil {
 			return
 		}
-		if err = wallet.ImportEntropy(bytes); err != nil {
+		if err = self.ImportEntropy(bytes); err != nil {
 			return
 		}
 	}
@@ -35,19 +35,19 @@ func (wallet *Wallet) ProcessWalletArguments() (err error) {
 			return
 		}
 
-		if err = wallet.Encryption.Encrypt(v[0], diff); err != nil {
+		if err = self.Encryption.Encrypt(v[0], diff); err != nil {
 			return
 		}
 	}
 
 	if password := arguments.Arguments["--wallet-decrypt"]; password != nil {
-		if err = wallet.loadWallet(password.(string), true); err != nil {
+		if err = self.loadWallet(password.(string), true); err != nil {
 			return
 		}
 	}
 
 	if arguments.Arguments["--wallet-remove-encryption"] == true {
-		if err = wallet.Encryption.RemoveEncryption(); err != nil {
+		if err = self.Encryption.RemoveEncryption(); err != nil {
 			return
 		}
 	}
@@ -58,7 +58,7 @@ func (wallet *Wallet) ProcessWalletArguments() (err error) {
 		var addr *wallet_address.WalletAddress
 
 		if v[0] == "auto" {
-			if addr, err = wallet.GetFirstStakedAddress(true); err != nil {
+			if addr, err = self.GetFirstStakedAddress(true); err != nil {
 				return
 			}
 		} else {
@@ -66,12 +66,12 @@ func (wallet *Wallet) ProcessWalletArguments() (err error) {
 			if index, err = strconv.Atoi(v[0]); err != nil {
 				return
 			} else {
-				if addr, err = wallet.GetWalletAddress(index, true); err != nil {
+				if addr, err = self.GetWalletAddress(index, true); err != nil {
 					return
 				}
 			}
 			if addr == nil {
-				if addr, err = wallet.GetWalletAddressByEncodedAddress(v[0], true); err != nil {
+				if addr, err = self.GetWalletAddressByEncodedAddress(v[0], true); err != nil {
 					return
 				}
 			}
@@ -80,7 +80,7 @@ func (wallet *Wallet) ProcessWalletArguments() (err error) {
 		if addr == nil {
 			return errors.New("Address specified by --wallet-export-shared-staked-address was not found")
 		}
-		if _, err = wallet.exportSharedStakedAddress(addr, v[2], false); err != nil {
+		if _, err = self.exportSharedStakedAddress(addr, v[2], false); err != nil {
 			return
 		}
 

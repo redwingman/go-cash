@@ -5,6 +5,7 @@ import (
 	"pandora-pay/blockchain/info"
 	"pandora-pay/cryptography"
 	"pandora-pay/helpers"
+	"pandora-pay/mempool"
 	"pandora-pay/store"
 	"pandora-pay/store/store_db/store_db_interface"
 )
@@ -41,7 +42,7 @@ func (apiStore *APIStore) openLoadTxPreview(args *APITransactionPreviewRequest, 
 func (api *APICommon) GetTxPreview(r *http.Request, args *APITransactionPreviewRequest, reply *APITransactionPreviewReply) (err error) {
 
 	if args.Hash != nil && len(args.Hash) == cryptography.HashSize {
-		txMempool := api.mempool.Txs.Get(string(args.Hash))
+		txMempool := mempool.Mempool.Txs.Get(string(args.Hash))
 		if txMempool != nil {
 			reply.Mempool = true
 			if reply.TxPreview, err = info.CreateTxPreviewFromTx(txMempool.Tx); err != nil {

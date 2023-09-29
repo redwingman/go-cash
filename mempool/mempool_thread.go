@@ -13,37 +13,37 @@ import (
 type mempoolWork struct {
 	chainHash   []byte //32 byte
 	chainHeight uint64
-	result      *MempoolResult
+	result      *mempoolResult
 }
 
 type mempoolWorker struct {
 	dbTx store_db_interface.StoreDBTransactionInterface
 }
 
-type MempoolWorkerAddTx struct {
+type mempoolWorkerAddTx struct {
 	Tx     *mempoolTx
 	Result chan<- error
 }
 
-type MempoolWorkerRemoveTxs struct {
+type mempoolWorkerRemoveTxs struct {
 	Txs    []string
 	Result chan<- bool
 }
 
-type MempoolWorkerInsertTxs struct {
+type mempoolWorkerInsertTxs struct {
 	Txs    []*mempoolTx
 	Result chan<- bool
 }
 
 // process the worker for transactions to prepare the transactions to the forger
-func (worker *mempoolWorker) processing(
+func (self *mempoolWorker) processing(
 	newWorkCn <-chan *mempoolWork,
 	suspendProcessingCn <-chan struct{},
 	continueProcessingCn <-chan ContinueProcessingType,
-	addTransactionCn <-chan *MempoolWorkerAddTx,
-	insertTransactionsCn <-chan *MempoolWorkerInsertTxs,
-	removeTransactionsCn <-chan *MempoolWorkerRemoveTxs,
-	txs *MempoolTxs,
+	addTransactionCn <-chan *mempoolWorkerAddTx,
+	insertTransactionsCn <-chan *mempoolWorkerInsertTxs,
+	removeTransactionsCn <-chan *mempoolWorkerRemoveTxs,
+	txs *mempoolTxs,
 ) {
 
 	var work *mempoolWork
@@ -81,7 +81,7 @@ func (worker *mempoolWorker) processing(
 		}
 	}
 
-	removeTxs := func(data *MempoolWorkerRemoveTxs) {
+	removeTxs := func(data *mempoolWorkerRemoveTxs) {
 
 		removedTxsMap := make(map[string]bool)
 		for _, hash := range data.Txs {
@@ -120,7 +120,7 @@ func (worker *mempoolWorker) processing(
 		data.Result <- len(removedTxsMap) > 0
 	}
 
-	insertTxs := func(data *MempoolWorkerInsertTxs) {
+	insertTxs := func(data *mempoolWorkerInsertTxs) {
 		result := false
 		for _, tx := range data.Txs {
 			if tx != nil && txsMap[tx.Tx.Bloom.HashStr] == nil {
@@ -174,7 +174,7 @@ func (worker *mempoolWorker) processing(
 			}
 
 			var tx *mempoolTx
-			var newAddTx *MempoolWorkerAddTx
+			var newAddTx *mempoolWorkerAddTx
 
 			for {
 

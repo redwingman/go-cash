@@ -7,8 +7,8 @@ import (
 	"pandora-pay/helpers"
 )
 
-type WalletEncryption struct {
-	wallet           *Wallet
+type walletEncryption struct {
+	wallet           *wallet
 	Encrypted        EncryptedVersion `json:"encrypted" msgpack:"encrypted"`
 	Salt             []byte           `json:"salt" msgpack:"salt"`
 	Difficulty       int              `json:"difficulty" msgpack:"difficulty"`
@@ -16,14 +16,14 @@ type WalletEncryption struct {
 	encryptionCipher *encryption.EncryptionCipher
 }
 
-func createEncryption(wallet *Wallet) *WalletEncryption {
-	return &WalletEncryption{
+func createEncryption(wallet *wallet) *walletEncryption {
+	return &walletEncryption{
 		wallet:    wallet,
 		Encrypted: ENCRYPTED_VERSION_PLAIN_TEXT,
 	}
 }
 
-func (self *WalletEncryption) Encrypt(newPassword string, difficulty int) (err error) {
+func (self *walletEncryption) Encrypt(newPassword string, difficulty int) (err error) {
 	self.wallet.Lock.Lock()
 	defer self.wallet.Lock.Unlock()
 
@@ -56,32 +56,32 @@ func (self *WalletEncryption) Encrypt(newPassword string, difficulty int) (err e
 	return
 }
 
-func (self *WalletEncryption) encryptData(input []byte) ([]byte, error) {
+func (self *walletEncryption) encryptData(input []byte) ([]byte, error) {
 	if self.Encrypted == ENCRYPTED_VERSION_ENCRYPTION_ARGON2 {
 		return self.encryptionCipher.Encrypt(input)
 	}
 	return input, nil
 }
 
-func (self *WalletEncryption) createEncryptionCipher() (err error) {
+func (self *walletEncryption) createEncryptionCipher() (err error) {
 	if self.encryptionCipher, err = encryption.CreateEncryptionCipher(self.password, self.Salt, uint32(self.Difficulty)*30); err != nil {
 		return
 	}
 	return
 }
 
-func (self *WalletEncryption) Decrypt(password string) (err error) {
+func (self *walletEncryption) Decrypt(password string) (err error) {
 	return self.wallet.loadWallet(password, false)
 }
 
-func (self *WalletEncryption) decryptData(input []byte) ([]byte, error) {
+func (self *walletEncryption) decryptData(input []byte) ([]byte, error) {
 	if self.Encrypted == ENCRYPTED_VERSION_ENCRYPTION_ARGON2 {
 		return self.encryptionCipher.Decrypt(input)
 	}
 	return input, nil
 }
 
-func (self *WalletEncryption) CheckPassword(password string, requirePassword bool) error {
+func (self *walletEncryption) CheckPassword(password string, requirePassword bool) error {
 	self.wallet.Lock.RLock()
 	defer self.wallet.Lock.RUnlock()
 
@@ -105,7 +105,7 @@ func (self *WalletEncryption) CheckPassword(password string, requirePassword boo
 	return nil
 }
 
-func (self *WalletEncryption) RemoveEncryption() (err error) {
+func (self *walletEncryption) RemoveEncryption() (err error) {
 	self.wallet.Lock.Lock()
 	defer self.wallet.Lock.Unlock()
 
@@ -128,7 +128,7 @@ func (self *WalletEncryption) RemoveEncryption() (err error) {
 	return
 }
 
-func (self *WalletEncryption) Logout() (err error) {
+func (self *walletEncryption) Logout() (err error) {
 	self.wallet.Lock.Lock()
 	if !self.wallet.Loaded {
 		self.wallet.Lock.Unlock()

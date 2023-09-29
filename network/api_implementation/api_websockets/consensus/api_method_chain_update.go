@@ -3,6 +3,7 @@ package consensus
 import (
 	"bytes"
 	"errors"
+	"pandora-pay/blockchain"
 	"pandora-pay/blockchain/blocks/block_complete"
 	"pandora-pay/cryptography"
 	"pandora-pay/helpers/linked_list"
@@ -16,7 +17,7 @@ func (consensus *Consensus) ChainUpdateProcess(conn *connection.AdvancedConnecti
 		return nil, errors.New("Chain Update Hash Length is invalid")
 	}
 
-	chainLastUpdate := consensus.chain.GetChainData()
+	chainLastUpdate := blockchain.Blockchain.GetChainData()
 	if bytes.Equal(chainLastUpdate.Hash, chainUpdateNotification.Hash) {
 		return nil, nil
 	}

@@ -2,6 +2,7 @@ package api_common
 
 import (
 	"net/http"
+	"pandora-pay/blockchain"
 	"pandora-pay/helpers"
 )
 
@@ -14,6 +15,6 @@ type APIBlockExistsReply struct {
 }
 
 func (api *APICommon) GetBlockExists(r *http.Request, args *APIBlockExistsRequest, reply *APIBlockExistsReply) (err error) {
-	reply.Exists, err = api.ApiStore.chain.OpenExistsBlock(args.Hash)
+	reply.Exists, err = blockchain.Blockchain.OpenExistsBlock(args.Hash)
 	return
 }

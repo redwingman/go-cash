@@ -19,9 +19,7 @@ import (
 )
 
 type TxsBuilderType struct {
-	wallet  *wallet.Wallet
-	mempool *mempool.Mempool
-	lock    *sync.Mutex
+	lock *sync.Mutex
 }
 
 var TxsBuilder *TxsBuilderType
@@ -30,7 +28,7 @@ func (builder *TxsBuilderType) getNonce(nonce uint64, publicKey []byte, accNonce
 	if nonce != 0 {
 		return nonce
 	}
-	return builder.mempool.GetNonce(publicKey, accNonce)
+	return mempool.Mempool.GetNonce(publicKey, accNonce)
 }
 
 func (builder *TxsBuilderType) convertFloatAmounts(amounts []float64, ast *asset.Asset) ([]uint64, error) {
@@ -56,7 +54,7 @@ func (builder *TxsBuilderType) getWalletAddresses(senders []string) ([]*wallet_a
 	var err error
 
 	for i, senderAddress := range senders {
-		if sendersWalletAddress[i], err = builder.wallet.GetWalletAddressByEncodedAddress(senderAddress, true); err != nil {
+		if sendersWalletAddress[i], err = wallet.Wallet.GetWalletAddressByEncodedAddress(senderAddress, true); err != nil {
 			return nil, err
 		}
 		if sendersWalletAddress[i].PrivateKey == nil {
@@ -130,7 +128,7 @@ func (builder *TxsBuilderType) CreateSimpleTx(txData *TxBuilderCreateSimpleTx, p
 	statusCallback("Transaction Created")
 
 	if propagateTx {
-		if err = builder.mempool.AddTxToMempool(tx, chainHeight, true, awaitAnswer, awaitBroadcast, advanced_connection_types.UUID_ALL, ctx); err != nil {
+		if err = mempool.Mempool.AddTxToMempool(tx, chainHeight, true, awaitAnswer, awaitBroadcast, advanced_connection_types.UUID_ALL, ctx); err != nil {
 			return nil, err
 		}
 	}
@@ -138,11 +136,9 @@ func (builder *TxsBuilderType) CreateSimpleTx(txData *TxBuilderCreateSimpleTx, p
 	return tx, nil
 }
 
-func TxsBuilderInit(wallet *wallet.Wallet, mempool *mempool.Mempool) error {
+func Initialize() error {
 
 	TxsBuilder = &TxsBuilderType{
-		wallet,
-		mempool,
 		&sync.Mutex{},
 	}
 

@@ -8,7 +8,7 @@ import (
 func (consensus *Consensus) GetUpdateNotification(newChainData *blockchain.BlockchainData) *ChainUpdateNotification {
 
 	if newChainData == nil {
-		newChainData = consensus.chain.GetChainData()
+		newChainData = blockchain.Blockchain.GetChainData()
 	}
 
 	return &ChainUpdateNotification{

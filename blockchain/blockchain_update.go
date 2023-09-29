@@ -19,7 +19,7 @@ type BlockchainDataUpdate struct {
 	ChainSyncData *blockchain_sync.BlockchainSyncData
 }
 
-type BlockchainUpdate struct {
+type blockchainUpdate struct {
 	err                    error
 	newChainData           *BlockchainData
 	dataStorage            *data_storage.DataStorage
@@ -33,23 +33,23 @@ type BlockchainUpdate struct {
 	exceptSocketUUID       advanced_connection_types.UUID
 }
 
-type BlockchainUpdatesQueue struct {
-	updatesCn            chan *BlockchainUpdate //buffered
-	updatesMempool       *multicast.MulticastChannel[*BlockchainUpdate]
-	updatesNotifications *multicast.MulticastChannel[*BlockchainUpdate]
-	chain                *Blockchain
+type blockchainUpdatesQueue struct {
+	updatesCn            chan *blockchainUpdate //buffered
+	updatesMempool       *multicast.MulticastChannel[*blockchainUpdate]
+	updatesNotifications *multicast.MulticastChannel[*blockchainUpdate]
+	chain                *blockchain
 }
 
-func createBlockchainUpdatesQueue() *BlockchainUpdatesQueue {
-	return &BlockchainUpdatesQueue{
-		make(chan *BlockchainUpdate, 100),
-		multicast.NewMulticastChannel[*BlockchainUpdate](),
-		multicast.NewMulticastChannel[*BlockchainUpdate](),
+func createBlockchainUpdatesQueue() *blockchainUpdatesQueue {
+	return &blockchainUpdatesQueue{
+		make(chan *blockchainUpdate, 100),
+		multicast.NewMulticastChannel[*blockchainUpdate](),
+		multicast.NewMulticastChannel[*blockchainUpdate](),
 		nil,
 	}
 }
 
-func (queue *BlockchainUpdatesQueue) hasCalledByForging(updates []*BlockchainUpdate) bool {
+func (self *blockchainUpdatesQueue) hasCalledByForging(updates []*blockchainUpdate) bool {
 	for _, update := range updates {
 		if update.calledByForging {
 			return true
@@ -58,7 +58,7 @@ func (queue *BlockchainUpdatesQueue) hasCalledByForging(updates []*BlockchainUpd
 	return false
 }
 
-func (queue *BlockchainUpdatesQueue) lastSuccess(updates []*BlockchainUpdate) *BlockchainData {
+func (self *blockchainUpdatesQueue) lastSuccess(updates []*blockchainUpdate) *BlockchainData {
 	for i := len(updates) - 1; i >= 0; i-- {
 		if updates[i].err == nil {
 			return updates[i].newChainData
@@ -68,7 +68,7 @@ func (queue *BlockchainUpdatesQueue) lastSuccess(updates []*BlockchainUpdate) *B
 	return nil
 }
 
-func (queue *BlockchainUpdatesQueue) executeUpdate(update *BlockchainUpdate) (err error) {
+func (self *blockchainUpdatesQueue) executeUpdate(update *blockchainUpdate) (err error) {
 
 	gui.GUI.Warning("-------------------------------------------")
 	gui.GUI.Warning(fmt.Sprintf("Included blocks %v - %d | TXs: %d | Hash %s", update.calledByForging, len(update.insertedBlocks), len(update.insertedTxs), base64.StdEncoding.EncodeToString(update.newChainData.Hash)))
@@ -76,7 +76,7 @@ func (queue *BlockchainUpdatesQueue) executeUpdate(update *BlockchainUpdate) (er
 	gui.GUI.Warning("-------------------------------------------")
 	update.newChainData.updateChainInfo()
 
-	queue.chain.UpdateNewChainUpdate.Broadcast(&blockchain_types.BlockchainUpdates{
+	self.chain.UpdateNewChainUpdate.Broadcast(&blockchain_types.BlockchainUpdates{
 		update.dataStorage.AccsCollection,
 		update.dataStorage.PlainAccs,
 		update.dataStorage.Asts,
@@ -85,15 +85,15 @@ func (queue *BlockchainUpdatesQueue) executeUpdate(update *BlockchainUpdate) (er
 		update.newChainData.Hash,
 	})
 
-	chainSyncData := queue.chain.Sync.AddBlocksChanged(uint32(len(update.insertedBlocks)), true)
+	chainSyncData := self.chain.Sync.AddBlocksChanged(uint32(len(update.insertedBlocks)), true)
 
-	queue.updatesMempool.Broadcast(update)
-	queue.updatesNotifications.Broadcast(update)
+	self.updatesMempool.Broadcast(update)
+	self.updatesNotifications.Broadcast(update)
 
-	gui.GUI.Log("queue.chain.UpdateNewChain fired")
-	queue.chain.UpdateNewChain.Broadcast(update.newChainData.Height)
+	gui.GUI.Log("self.chain.UpdateNewChain fired")
+	self.chain.UpdateNewChain.Broadcast(update.newChainData.Height)
 
-	queue.chain.UpdateNewChainDataUpdate.Broadcast(&BlockchainDataUpdate{
+	self.chain.UpdateNewChainDataUpdate.Broadcast(&BlockchainDataUpdate{
 		update.newChainData,
 		chainSyncData,
 	})
@@ -101,39 +101,39 @@ func (queue *BlockchainUpdatesQueue) executeUpdate(update *BlockchainUpdate) (er
 	return nil
 }
 
-func (queue *BlockchainUpdatesQueue) processBlockchainUpdatesQueue() {
+func (self *blockchainUpdatesQueue) processBlockchainUpdatesQueue() {
 	recovery.SafeGo(func() {
 
 		for {
 
-			works := make([]*BlockchainUpdate, 0)
-			update, _ := <-queue.updatesCn
+			works := make([]*blockchainUpdate, 0)
+			update, _ := <-self.updatesCn
 			works = append(works, update)
 
 			loop := true
 			for loop {
 				select {
-				case update, _ = <-queue.updatesCn:
+				case update, _ = <-self.updatesCn:
 					works = append(works, update)
 				default:
 					loop = false
 				}
 			}
 
-			lastSuccessUpdate := queue.lastSuccess(works)
-			updateForging := lastSuccessUpdate != nil || queue.hasCalledByForging(works)
+			lastSuccessUpdate := self.lastSuccess(works)
+			updateForging := lastSuccessUpdate != nil || self.hasCalledByForging(works)
 			for _, update = range works {
 				if update.err == nil {
-					if err := queue.executeUpdate(update); err != nil {
+					if err := self.executeUpdate(update); err != nil {
 						gui.GUI.Error("Error processUpdate", err)
 					}
 				}
 			}
 
-			chainSyncData := queue.chain.Sync.GetSyncData()
+			chainSyncData := self.chain.Sync.GetSyncData()
 			if chainSyncData.Started {
 				//create next block and the workers will be automatically reset
-				queue.chain.createNextBlockForForging(lastSuccessUpdate, updateForging)
+				self.chain.createNextBlockForForging(lastSuccessUpdate, updateForging)
 			}
 
 		}

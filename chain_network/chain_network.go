@@ -1,10 +1,8 @@
 package chain_network
 
 import (
-	"pandora-pay/blockchain"
 	"pandora-pay/config"
 	"pandora-pay/helpers/recovery"
-	"pandora-pay/mempool"
 	"pandora-pay/network/api_implementation/api_websockets/consensus"
 	"pandora-pay/network/server/node_http"
 	"pandora-pay/network/websocks"
@@ -82,7 +80,7 @@ func syncBlockchainNewConnections() {
 	})
 }
 
-func InitChainNetwork(chain *blockchain.Blockchain, mempool *mempool.Mempool) {
+func Initialize() {
 
 	continuouslyDownloadChain()
 
@@ -92,6 +90,6 @@ func InitChainNetwork(chain *blockchain.Blockchain, mempool *mempool.Mempool) {
 
 	syncBlockchainNewConnections()
 
-	initializeConsensus(chain, mempool)
+	initializeConsensus()
 
 }

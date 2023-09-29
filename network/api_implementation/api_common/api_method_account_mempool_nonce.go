@@ -2,6 +2,7 @@ package api_common
 
 import (
 	"net/http"
+	"pandora-pay/mempool"
 	"pandora-pay/network/api_implementation/api_common/api_types"
 )
 
@@ -37,6 +38,6 @@ func (api *APICommon) GetAccountMempoolNonce(r *http.Request, args *APIAccountMe
 	//	return err
 	//}
 
-	reply.Nonce = api.mempool.GetNonce(publicKey, reply.Nonce)
+	reply.Nonce = mempool.Mempool.GetNonce(publicKey, reply.Nonce)
 	return nil
 }

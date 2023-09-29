@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"pandora-pay/addresses"
-	"pandora-pay/app"
 	"pandora-pay/blockchain/transactions/transaction/transaction_simple"
 	"pandora-pay/blockchain/transactions/transaction/transaction_simple/transaction_simple_extra"
 	"pandora-pay/builds/webassembly/webassembly_utils"
 	"pandora-pay/cryptography/crypto"
 	"pandora-pay/txs_builder/wizard"
+	"pandora-pay/wallet"
 	"syscall/js"
 )
 
@@ -20,7 +20,7 @@ func createSimpleTx(this js.Value, args []js.Value) interface{} {
 			return nil, errors.New("Argument must be a string and a callback")
 		}
 
-		if err := app.Wallet.Encryption.CheckPassword(args[2].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[2].String(), false); err != nil {
 			return nil, err
 		}
 
@@ -67,7 +67,7 @@ func createSimpleTx(this js.Value, args []js.Value) interface{} {
 		}
 
 		if len(txData.Sender) > 0 {
-			senderWalletAddr, err := app.Wallet.GetWalletAddressByEncodedAddress(txData.Sender, true)
+			senderWalletAddr, err := wallet.Wallet.GetWalletAddressByEncodedAddress(txData.Sender, true)
 			if err != nil {
 				return nil, err
 			}

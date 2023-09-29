@@ -2,20 +2,20 @@ package main
 
 import (
 	"encoding/base64"
-	"pandora-pay/app"
 	"pandora-pay/blockchain/transactions/transaction"
 	"pandora-pay/builds/webassembly/webassembly_utils"
 	"pandora-pay/helpers"
 	"pandora-pay/helpers/advanced_buffers"
+	"pandora-pay/wallet"
 	"syscall/js"
 )
 
 func getWallet(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		app.Wallet.Lock.RLock()
-		defer app.Wallet.Lock.RUnlock()
+		wallet.Wallet.Lock.RLock()
+		defer wallet.Wallet.Lock.RUnlock()
 
-		data, err := helpers.GetJSONDataExcept(app.Wallet, "mnemonic", "seed")
+		data, err := helpers.GetJSONDataExcept(wallet.Wallet, "mnemonic", "seed")
 		if err != nil {
 			return nil, err
 		}
@@ -27,14 +27,14 @@ func getWallet(this js.Value, args []js.Value) interface{} {
 func exportWalletJSON(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
 
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return nil, err
 		}
 
-		app.Wallet.Lock.RLock()
-		defer app.Wallet.Lock.RUnlock()
+		wallet.Wallet.Lock.RLock()
+		defer wallet.Wallet.Lock.RUnlock()
 
-		data, err := helpers.GetJSONDataExcept(app.Wallet)
+		data, err := helpers.GetJSONDataExcept(wallet.Wallet)
 		if err != nil {
 			return nil, err
 		}
@@ -45,52 +45,52 @@ func exportWalletJSON(this js.Value, args []js.Value) interface{} {
 
 func getWalletMnemonic(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return nil, err
 		}
-		app.Wallet.Lock.RLock()
-		defer app.Wallet.Lock.RUnlock()
-		return app.Wallet.Mnemonic, nil
+		wallet.Wallet.Lock.RLock()
+		defer wallet.Wallet.Lock.RUnlock()
+		return wallet.Wallet.Mnemonic, nil
 	})
 }
 
 func getWalletSeed(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return nil, err
 		}
-		app.Wallet.Lock.RLock()
-		defer app.Wallet.Lock.RUnlock()
-		return base64.StdEncoding.EncodeToString(app.Wallet.Seed), nil
+		wallet.Wallet.Lock.RLock()
+		defer wallet.Wallet.Lock.RUnlock()
+		return base64.StdEncoding.EncodeToString(wallet.Wallet.Seed), nil
 	})
 }
 
 func createNewWallet(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return nil, err
 		}
-		return nil, app.Wallet.CreateEmptyWallet()
+		return nil, wallet.Wallet.CreateEmptyWallet()
 	})
 }
 
 func importMnemonic(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return nil, err
 		}
-		return true, app.Wallet.ImportMnemonic(args[1].String())
+		return true, wallet.Wallet.ImportMnemonic(args[1].String())
 	})
 }
 
 func getWalletAddressSecretKey(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
 
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return nil, err
 		}
 
-		addr, err := app.Wallet.GetWalletAddressByPublicKeyString(args[1].String(), true)
+		addr, err := wallet.Wallet.GetWalletAddressByPublicKeyString(args[1].String(), true)
 		if err != nil {
 			return nil, err
 		}
@@ -102,11 +102,11 @@ func getWalletAddressSecretKey(this js.Value, args []js.Value) interface{} {
 func getWalletAddress(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
 
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return nil, err
 		}
 
-		adr, err := app.Wallet.GetWalletAddressByPublicKeyString(args[1].String(), true)
+		adr, err := wallet.Wallet.GetWalletAddressByPublicKeyString(args[1].String(), true)
 		if err != nil {
 			return nil, err
 		}
@@ -118,11 +118,11 @@ func getWalletAddress(this js.Value, args []js.Value) interface{} {
 func addNewWalletAddress(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
 
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return nil, err
 		}
 
-		adr, err := app.Wallet.AddNewAddress(false, args[1].String(), args[2].Bool(), args[3].Bool(), true)
+		adr, err := wallet.Wallet.AddNewAddress(false, args[1].String(), args[2].Bool(), args[3].Bool(), true)
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +132,7 @@ func addNewWalletAddress(this js.Value, args []js.Value) interface{} {
 
 func removeWalletAddress(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return nil, err
 		}
 
@@ -141,13 +141,13 @@ func removeWalletAddress(this js.Value, args []js.Value) interface{} {
 			return nil, err
 		}
 
-		return app.Wallet.RemoveAddressByPublicKey(publicKey, true)
+		return wallet.Wallet.RemoveAddressByPublicKey(publicKey, true)
 	})
 }
 
 func renameWalletAddress(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return nil, err
 		}
 
@@ -156,14 +156,14 @@ func renameWalletAddress(this js.Value, args []js.Value) interface{} {
 			return nil, err
 		}
 
-		return app.Wallet.RenameAddressByPublicKey(publicKey, args[2].String(), true)
+		return wallet.Wallet.RenameAddressByPublicKey(publicKey, args[2].String(), true)
 	})
 }
 
 func importWalletSecretKey(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
 
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return nil, err
 		}
 
@@ -172,7 +172,7 @@ func importWalletSecretKey(this js.Value, args []js.Value) interface{} {
 			return nil, err
 		}
 
-		adr, err := app.Wallet.ImportSecretKey(args[2].String(), key, args[3].Bool(), args[4].Bool())
+		adr, err := wallet.Wallet.ImportSecretKey(args[2].String(), key, args[3].Bool(), args[4].Bool())
 		if err != nil {
 			return nil, err
 		}
@@ -183,19 +183,19 @@ func importWalletSecretKey(this js.Value, args []js.Value) interface{} {
 
 func importWalletJSON(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return nil, err
 		}
-		return true, app.Wallet.ImportWalletJSON([]byte(args[1].String()))
+		return true, wallet.Wallet.ImportWalletJSON([]byte(args[1].String()))
 	})
 }
 
 func importWalletAddressJSON(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return nil, err
 		}
-		adr, err := app.Wallet.ImportWalletAddressJSON([]byte(args[1].String()))
+		adr, err := wallet.Wallet.ImportWalletAddressJSON([]byte(args[1].String()))
 		if err != nil {
 			return nil, err
 		}
@@ -205,7 +205,7 @@ func importWalletAddressJSON(this js.Value, args []js.Value) interface{} {
 
 func checkPasswordWallet(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return false, err
 		}
 		return true, nil
@@ -214,7 +214,7 @@ func checkPasswordWallet(this js.Value, args []js.Value) interface{} {
 
 func encryptWallet(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.Encrypt(args[0].String(), args[1].Int()); err != nil {
+		if err := wallet.Wallet.Encryption.Encrypt(args[0].String(), args[1].Int()); err != nil {
 			return nil, err
 		}
 		return true, nil
@@ -223,7 +223,7 @@ func encryptWallet(this js.Value, args []js.Value) interface{} {
 
 func decryptWallet(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.Decrypt(args[0].String()); err != nil {
+		if err := wallet.Wallet.Encryption.Decrypt(args[0].String()); err != nil {
 			return nil, err
 		}
 		return true, nil
@@ -232,10 +232,10 @@ func decryptWallet(this js.Value, args []js.Value) interface{} {
 
 func removeEncryptionWallet(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), true); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), true); err != nil {
 			return nil, err
 		}
-		if err := app.Wallet.Encryption.RemoveEncryption(); err != nil {
+		if err := wallet.Wallet.Encryption.RemoveEncryption(); err != nil {
 			return nil, err
 		}
 		return true, nil
@@ -244,17 +244,17 @@ func removeEncryptionWallet(this js.Value, args []js.Value) interface{} {
 
 func logoutWallet(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.Logout(); err != nil {
+		if err := wallet.Wallet.Encryption.Logout(); err != nil {
 			return nil, err
 		}
 		return true, nil
 	})
 }
 
-//signing not encrypting
+// signing not encrypting
 func signMessageWalletAddress(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return false, err
 		}
 
@@ -263,7 +263,7 @@ func signMessageWalletAddress(this js.Value, args []js.Value) interface{} {
 			return nil, err
 		}
 
-		addr, err := app.Wallet.GetWalletAddressByEncodedAddress(args[2].String(), true)
+		addr, err := wallet.Wallet.GetWalletAddressByEncodedAddress(args[2].String(), true)
 		if err != nil {
 			return nil, err
 		}
@@ -279,7 +279,7 @@ func signMessageWalletAddress(this js.Value, args []js.Value) interface{} {
 
 func decryptMessageWalletAddress(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return false, err
 		}
 
@@ -288,7 +288,7 @@ func decryptMessageWalletAddress(this js.Value, args []js.Value) interface{} {
 			return nil, err
 		}
 
-		addr, err := app.Wallet.GetWalletAddressByEncodedAddress(args[2].String(), true)
+		addr, err := wallet.Wallet.GetWalletAddressByEncodedAddress(args[2].String(), true)
 		if err != nil {
 			return nil, err
 		}
@@ -305,11 +305,11 @@ func decryptMessageWalletAddress(this js.Value, args []js.Value) interface{} {
 func deriveSharedStakedWalletAddress(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
 
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return false, err
 		}
 
-		addr, err := app.Wallet.GetWalletAddressByEncodedAddress(args[1].String(), true)
+		addr, err := wallet.Wallet.GetWalletAddressByEncodedAddress(args[1].String(), true)
 		if err != nil {
 			return nil, err
 		}
@@ -327,7 +327,7 @@ func deriveSharedStakedWalletAddress(this js.Value, args []js.Value) interface{}
 func tryDecryptBalance(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
 
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return false, err
 		}
 
@@ -342,7 +342,7 @@ func tryDecryptBalance(this js.Value, args []js.Value) interface{} {
 			return nil, err
 		}
 
-		decrypted, err := app.Wallet.TryDecryptBalanceByPublicKey(parameters.PublicKey, parameters.Balance, true, parameters.MatchValue)
+		decrypted, err := wallet.Wallet.TryDecryptBalanceByPublicKey(parameters.PublicKey, parameters.Balance, true, parameters.MatchValue)
 		if err != nil {
 			return nil, err
 		}
@@ -356,7 +356,7 @@ func tryDecryptBalance(this js.Value, args []js.Value) interface{} {
 func getPrivateKeysWalletAddress(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
 
-		if err := app.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
+		if err := wallet.Wallet.Encryption.CheckPassword(args[0].String(), false); err != nil {
 			return false, err
 		}
 
@@ -369,7 +369,7 @@ func getPrivateKeysWalletAddress(this js.Value, args []js.Value) interface{} {
 			return nil, err
 		}
 
-		privateKey, spendPrivateKey, previousValue := app.Wallet.GetPrivateKeys(parameters.PublicKey, parameters.Asset)
+		privateKey, spendPrivateKey, previousValue := wallet.Wallet.GetPrivateKeys(parameters.PublicKey, parameters.Asset)
 
 		return webassembly_utils.ConvertJSONBytes(struct {
 			PrivateKey      []byte `json:"privateKey"`
@@ -395,7 +395,7 @@ func decryptTx(this js.Value, args []js.Value) interface{} {
 			return nil, err
 		}
 
-		decrypted, err := app.Wallet.DecryptTx(tx, publicKey)
+		decrypted, err := wallet.Wallet.DecryptTx(tx, publicKey)
 		if err != nil {
 			return nil, err
 		}
@@ -406,7 +406,7 @@ func decryptTx(this js.Value, args []js.Value) interface{} {
 
 func setWalletNonHardening(this js.Value, args []js.Value) interface{} {
 	return webassembly_utils.PromiseFunction(func() (interface{}, error) {
-		app.Wallet.SetNonHardening(args[0].Bool())
+		wallet.Wallet.SetNonHardening(args[0].Bool())
 		return true, nil
 	})
 }

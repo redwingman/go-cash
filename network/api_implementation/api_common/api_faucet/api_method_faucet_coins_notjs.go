@@ -13,6 +13,7 @@ import (
 	"pandora-pay/txs_builder"
 	"pandora-pay/txs_builder/txs_builder_zether_helper"
 	"pandora-pay/txs_builder/wizard"
+	"pandora-pay/wallet"
 )
 
 func (api *Faucet) GetFaucetCoins(r *http.Request, args *APIFaucetCoinsRequest, reply *APIFaucetCoinsReply) error {
@@ -26,7 +27,7 @@ func (api *Faucet) GetFaucetCoins(r *http.Request, args *APIFaucetCoinsRequest, 
 		return errors.New("Faucet token is invalid")
 	}
 
-	addr, err := api.wallet.GetWalletAddress(0, true)
+	addr, err := wallet.Wallet.GetWalletAddress(0, true)
 	if err != nil {
 		return err
 	}

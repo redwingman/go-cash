@@ -69,12 +69,12 @@ func BroadcastTxs(txs []*transaction.Transaction, justCreated, awaitPropagation 
 	return errs
 }
 
-func initializeConsensus(chain *blockchain.Blockchain, mempool *mempool.Mempool) {
+func initializeConsensus() {
 
 	recovery.SafeGo(func() {
 
-		updateNewChainUpdateListener := chain.UpdateNewChainDataUpdate.AddListener()
-		defer chain.UpdateNewChainDataUpdate.RemoveChannel(updateNewChainUpdateListener)
+		updateNewChainUpdateListener := blockchain.Blockchain.UpdateNewChainDataUpdate.AddListener()
+		defer blockchain.Blockchain.UpdateNewChainDataUpdate.RemoveChannel(updateNewChainUpdateListener)
 
 		for {
 			newChainDataUpdate, ok := <-updateNewChainUpdateListener
@@ -90,7 +90,7 @@ func initializeConsensus(chain *blockchain.Blockchain, mempool *mempool.Mempool)
 
 	})
 
-	mempool.OnBroadcastNewTransaction = func(txs []*transaction.Transaction, justCreated, awaitPropagation bool, exceptSocketUUID advanced_connection_types.UUID, ctx context.Context) []error {
+	mempool.Mempool.OnBroadcastNewTransaction = func(txs []*transaction.Transaction, justCreated, awaitPropagation bool, exceptSocketUUID advanced_connection_types.UUID, ctx context.Context) []error {
 		return BroadcastTxs(txs, justCreated, awaitPropagation, exceptSocketUUID, ctx)
 	}
 

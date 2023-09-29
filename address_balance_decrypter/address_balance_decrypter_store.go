@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (decryptor *AddressBalanceDecrypter) loadFromStore() error {
+func (self *AddressBalanceDecrypter) loadFromStore() error {
 	return store.StoreBalancesDecrypted.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
 
 		bytes := reader.Get("map")
@@ -22,25 +22,25 @@ func (decryptor *AddressBalanceDecrypter) loadFromStore() error {
 		}
 
 		for k, v := range data {
-			decryptor.previousValues.Store(k, v)
+			self.previousValues.Store(k, v)
 		}
 
 		return
 	})
 }
 
-func (decryptor *AddressBalanceDecrypter) saveToStore() {
+func (self *AddressBalanceDecrypter) saveToStore() {
 	for {
 		time.Sleep(2 * time.Minute)
 
-		if decryptor.previousValuesChanged.IsNotSet() {
+		if self.previousValuesChanged.IsNotSet() {
 			continue
 		}
 
-		decryptor.previousValuesChanged.UnSet()
+		self.previousValuesChanged.UnSet()
 
 		data := make(map[string]uint64)
-		decryptor.previousValues.Range(func(key string, value uint64) bool {
+		self.previousValues.Range(func(key string, value uint64) bool {
 			data[key] = value
 			return true
 		})

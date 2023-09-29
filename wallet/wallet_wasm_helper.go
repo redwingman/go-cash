@@ -1,11 +1,11 @@
 package wallet
 
-func (wallet *Wallet) GetPrivateKeys(publicKey, asset []byte) (privateKey, spendPrivateKey []byte, previousValue uint64) {
+func (self *wallet) GetPrivateKeys(publicKey, asset []byte) (privateKey, spendPrivateKey []byte, previousValue uint64) {
 
-	wallet.Lock.RLock()
-	defer wallet.Lock.RUnlock()
+	self.Lock.RLock()
+	defer self.Lock.RUnlock()
 
-	addr := wallet.addressesMap[string(publicKey)]
+	addr := self.addressesMap[string(publicKey)]
 
 	if addr.PrivateKey != nil {
 		privateKey = addr.PrivateKey.Key

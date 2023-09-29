@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"pandora-pay/cryptography"
 	"pandora-pay/helpers"
+	"pandora-pay/mempool"
 	"pandora-pay/store"
 	"pandora-pay/store/store_db/store_db_interface"
 )
@@ -40,7 +41,7 @@ func (api *APICommon) openLoadTxOnly(args *APITxRawRequest, reply *APITxRawReply
 func (api *APICommon) GetTxRaw(r *http.Request, args *APITxRawRequest, reply *APITxRawReply) error {
 
 	if len(args.Hash) == cryptography.HashSize {
-		txMempool := api.mempool.Txs.Get(string(args.Hash))
+		txMempool := mempool.Mempool.Txs.Get(string(args.Hash))
 		if txMempool != nil {
 			reply.Tx = txMempool.Tx.Bloom.Serialized
 			return nil

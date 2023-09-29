@@ -14,7 +14,7 @@ import (
 	"pandora-pay/helpers"
 )
 
-type DecryptZetherPayloadOutput struct {
+type decryptZetherPayloadOutput struct {
 	WhisperSenderValid    bool   `json:"whisperSenderValid" msgpack:"whisperSenderValid"`
 	SentAmount            uint64 `json:"sentAmount" msgpack:"sentAmount"`
 	WhisperRecipientValid bool   `json:"whisperRecipientValid" msgpack:"whisperRecipientValid"`
@@ -25,16 +25,16 @@ type DecryptZetherPayloadOutput struct {
 	Asset                 []byte `json:"asset" msgpack:"asset"`
 }
 
-type DecryptTxZether struct {
-	Payloads []*DecryptZetherPayloadOutput `json:"payloads" msgpack:"payloads"`
+type decryptTxZether struct {
+	Payloads []*decryptZetherPayloadOutput `json:"payloads" msgpack:"payloads"`
 }
 
 type DecryptedTx struct {
 	Type     transaction_type.TransactionVersion `json:"type" msgpack:"type"`
-	ZetherTx *DecryptTxZether                    `json:"zetherTx" msgpack:"zetherTx"`
+	ZetherTx *decryptTxZether                    `json:"zetherTx" msgpack:"zetherTx"`
 }
 
-func (w *Wallet) DecryptTx(tx *transaction.Transaction, walletPublicKey []byte) (*DecryptedTx, error) {
+func (self *wallet) DecryptTx(tx *transaction.Transaction, walletPublicKey []byte) (*DecryptedTx, error) {
 
 	if tx == nil {
 		return nil, errors.New("Transaction is invalid")
@@ -52,8 +52,8 @@ func (w *Wallet) DecryptTx(tx *transaction.Transaction, walletPublicKey []byte) 
 		txBase := tx.TransactionBaseInterface.(*transaction_zether.TransactionZether)
 
 		var data []byte
-		output.ZetherTx = &DecryptTxZether{
-			make([]*DecryptZetherPayloadOutput, len(txBase.Payloads)),
+		output.ZetherTx = &decryptTxZether{
+			make([]*decryptZetherPayloadOutput, len(txBase.Payloads)),
 		}
 
 		for t, payload := range txBase.Payloads {
@@ -62,9 +62,9 @@ func (w *Wallet) DecryptTx(tx *transaction.Transaction, walletPublicKey []byte) 
 					continue
 				}
 
-				if addr := w.GetWalletAddressByPublicKey(publicKey, true); addr != nil {
+				if addr := self.GetWalletAddressByPublicKey(publicKey, true); addr != nil {
 
-					decyptedZetherPayload := &DecryptZetherPayloadOutput{
+					decyptedZetherPayload := &decryptZetherPayloadOutput{
 						RecipientIndex: -1,
 						Asset:          payload.Asset,
 					}

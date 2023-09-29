@@ -2,16 +2,14 @@ package wallet
 
 import (
 	"pandora-pay/blockchain/blockchain_types"
-	"pandora-pay/blockchain/forging"
 	"pandora-pay/config"
 	"pandora-pay/helpers/multicast"
-	"pandora-pay/mempool"
 	"pandora-pay/wallet/wallet_address"
 	"sync"
 )
 
-type Wallet struct {
-	Encryption           *WalletEncryption               `json:"encryption" msgpack:"encryption"`
+type wallet struct {
+	Encryption           *walletEncryption               `json:"encryption" msgpack:"encryption"`
 	Version              Version                         `json:"version" msgpack:"version"`
 	Mnemonic             string                          `json:"mnemonic" msgpack:"mnemonic"`
 	Seed                 []byte                          `json:"seed" msgpack:"seed"` //32 byte
@@ -22,70 +20,73 @@ type Wallet struct {
 	Loaded               bool                            `json:"loaded" msgpack:"loaded"`
 	DelegatesCount       int                             `json:"delegatesCount" msgpack:"delegatesCount"`
 	addressesMap         map[string]*wallet_address.WalletAddress
-	forging              *forging.Forging
-	mempool              *mempool.Mempool
 	updateNewChainUpdate *multicast.MulticastChannel[*blockchain_types.BlockchainUpdates]
 	nonHardening         bool         `json:"nonHardening" msgpack:"nonHardening"`
 	Lock                 sync.RWMutex `json:"-" msgpack:"-"`
 }
 
-func createWallet(forging *forging.Forging, mempool *mempool.Mempool, updateNewChainUpdate *multicast.MulticastChannel[*blockchain_types.BlockchainUpdates]) (wallet *Wallet) {
-	wallet = &Wallet{
-		forging:              forging,
-		mempool:              mempool,
+var Wallet *wallet
+
+// must be locked before
+func (self *wallet) clearWallet() {
+	self.Version = VERSION_SIMPLE
+	self.Mnemonic = ""
+	self.Seed = nil
+	self.SeedIndex = 0
+	self.Count = 0
+	self.CountImportedIndex = 0
+	self.Addresses = make([]*wallet_address.WalletAddress, 0)
+	self.addressesMap = make(map[string]*wallet_address.WalletAddress)
+	self.Encryption = createEncryption(self)
+	self.nonHardening = false
+	self.setLoaded(false)
+}
+
+// must be locked before
+func (self *wallet) setLoaded(newValue bool) {
+	self.Loaded = newValue
+	self.initWalletCLI()
+}
+
+func createWalletInstance(updateNewChainUpdate *multicast.MulticastChannel[*blockchain_types.BlockchainUpdates]) *wallet {
+	w := &wallet{
 		updateNewChainUpdate: updateNewChainUpdate,
 	}
-	wallet.clearWallet()
-	return
+	w.clearWallet()
+	return w
 }
 
-// must be locked before
-func (wallet *Wallet) clearWallet() {
-	wallet.Version = VERSION_SIMPLE
-	wallet.Mnemonic = ""
-	wallet.Seed = nil
-	wallet.SeedIndex = 0
-	wallet.Count = 0
-	wallet.CountImportedIndex = 0
-	wallet.Addresses = make([]*wallet_address.WalletAddress, 0)
-	wallet.addressesMap = make(map[string]*wallet_address.WalletAddress)
-	wallet.Encryption = createEncryption(wallet)
-	wallet.nonHardening = false
-	wallet.setLoaded(false)
-}
+func createWallet() (*wallet, error) {
 
-// must be locked before
-func (wallet *Wallet) setLoaded(newValue bool) {
-	wallet.Loaded = newValue
-	wallet.initWalletCLI()
-}
+	w := createWalletInstance(nil)
 
-func CreateWallet(forging *forging.Forging, mempool *mempool.Mempool) (*Wallet, error) {
-
-	wallet := createWallet(forging, mempool, nil)
-
-	if err := wallet.loadWallet("", true); err != nil {
+	if err := w.loadWallet("", true); err != nil {
 		if err.Error() == "cipher: message authentication failed" {
-			return wallet, nil
+			return w, nil
 		}
 		if err.Error() != "Wallet doesn't exist" {
 			return nil, err
 		}
-		if err = wallet.CreateEmptyWallet(); err != nil {
+		if err = w.CreateEmptyWallet(); err != nil {
 			return nil, err
 		}
 	}
 
-	return wallet, nil
+	return w, nil
 }
 
-func (wallet *Wallet) InitializeWallet(updateNewChainUpdate *multicast.MulticastChannel[*blockchain_types.BlockchainUpdates]) {
+func (self *wallet) InitializeWallet(updateNewChainUpdate *multicast.MulticastChannel[*blockchain_types.BlockchainUpdates]) {
 
-	wallet.Lock.Lock()
-	wallet.updateNewChainUpdate = updateNewChainUpdate
-	wallet.Lock.Unlock()
+	self.Lock.Lock()
+	self.updateNewChainUpdate = updateNewChainUpdate
+	self.Lock.Unlock()
 
 	if config.NODE_CONSENSUS == config.NODE_CONSENSUS_TYPE_FULL {
-		wallet.processRefreshWallets()
+		self.processRefreshWallets()
 	}
+}
+
+func Initialize() (err error) {
+	Wallet, err = createWallet()
+	return err
 }

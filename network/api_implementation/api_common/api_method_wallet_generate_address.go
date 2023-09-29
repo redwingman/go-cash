@@ -9,6 +9,7 @@ import (
 	"pandora-pay/network/api_implementation/api_common/api_types"
 	"pandora-pay/store"
 	"pandora-pay/store/store_db/store_db_interface"
+	"pandora-pay/wallet"
 )
 
 type APIWalletGenerateAddressRequest struct {
@@ -33,7 +34,7 @@ func (api *APICommon) GetWalletGenerateAddress(r *http.Request, args *APIWalletG
 		return err
 	}
 
-	walletAddr := api.wallet.GetWalletAddressByPublicKey(publicKey, true)
+	walletAddr := wallet.Wallet.GetWalletAddressByPublicKey(publicKey, true)
 	if walletAddr == nil {
 		return errors.New("address doesn't exist in your waallet")
 	}

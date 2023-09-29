@@ -11,11 +11,11 @@ import (
 	"time"
 )
 
-func (mempool *Mempool) initCLI() {
+func (self *mempool) initCLI() {
 
 	cliShowTxs := func(cmd string, ctx context.Context) (err error) {
 
-		transactions := mempool.Txs.GetTxsFromMap()
+		transactions := self.Txs.GetTxsFromMap()
 		if len(transactions) == 0 {
 			return
 		}

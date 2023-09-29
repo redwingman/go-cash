@@ -14,8 +14,6 @@ import (
 )
 
 type WebsocketSubscriptions struct {
-	chain                             *blockchain.Blockchain
-	mempool                           *mempool.Mempool
 	websocketClosedCn                 chan *connection.AdvancedConnection
 	newSubscriptionCn                 chan *connection.SubscriptionNotification
 	removeSubscriptionCn              chan *connection.SubscriptionNotification
@@ -25,10 +23,10 @@ type WebsocketSubscriptions struct {
 	transactionsSubscriptions         map[string]map[advanced_connection_types.UUID]*connection.SubscriptionNotification
 }
 
-func newWebsocketSubscriptions(chain *blockchain.Blockchain, mempool *mempool.Mempool) (subs *WebsocketSubscriptions) {
+func newWebsocketSubscriptions() (subs *WebsocketSubscriptions) {
 
 	subs = &WebsocketSubscriptions{
-		chain, mempool, make(chan *connection.AdvancedConnection),
+		make(chan *connection.AdvancedConnection),
 		make(chan *connection.SubscriptionNotification),
 		make(chan *connection.SubscriptionNotification),
 		make(map[string]map[advanced_connection_types.UUID]*connection.SubscriptionNotification),
@@ -127,14 +125,14 @@ func (this *WebsocketSubscriptions) removeConnection(conn *connection.AdvancedCo
 
 func (this *WebsocketSubscriptions) processSubscriptions() {
 
-	updateNotificationsCn := this.chain.UpdateSocketsSubscriptionsNotifications.AddListener()
-	defer this.chain.UpdateSocketsSubscriptionsNotifications.RemoveChannel(updateNotificationsCn)
+	updateNotificationsCn := blockchain.Blockchain.UpdateSocketsSubscriptionsNotifications.AddListener()
+	defer blockchain.Blockchain.UpdateSocketsSubscriptionsNotifications.RemoveChannel(updateNotificationsCn)
 
-	updateTransactionsCn := this.chain.UpdateSocketsSubscriptionsTransactions.AddListener()
-	defer this.chain.UpdateSocketsSubscriptionsTransactions.RemoveChannel(updateTransactionsCn)
+	updateTransactionsCn := blockchain.Blockchain.UpdateSocketsSubscriptionsTransactions.AddListener()
+	defer blockchain.Blockchain.UpdateSocketsSubscriptionsTransactions.RemoveChannel(updateTransactionsCn)
 
-	updateMempoolTransactionsCn := this.mempool.Txs.UpdateMempoolTransactions.AddListener()
-	defer this.mempool.Txs.UpdateMempoolTransactions.RemoveChannel(updateMempoolTransactionsCn)
+	updateMempoolTransactionsCn := mempool.Mempool.Txs.UpdateMempoolTransactions.AddListener()
+	defer mempool.Mempool.Txs.UpdateMempoolTransactions.RemoveChannel(updateMempoolTransactionsCn)
 
 	var subsMap map[string]map[advanced_connection_types.UUID]*connection.SubscriptionNotification
 

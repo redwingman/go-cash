@@ -16,6 +16,7 @@ import (
 	"pandora-pay/helpers"
 	"pandora-pay/store"
 	"pandora-pay/store/store_db/store_db_interface"
+	"pandora-pay/wallet"
 	"pandora-pay/wallet/wallet_address"
 	"pandora-pay/wallet/wallet_address/shared_staked"
 )
@@ -41,7 +42,7 @@ func (api *DelegatorNode) DelegatorNotify(r *http.Request, args *ApiDelegatorNod
 	}
 	sharedStakedPublicKey := sharedStakedPrivateKey.GeneratePublicKey()
 
-	addr := api.wallet.GetWalletAddressByPublicKey(sharedStakedPublicKey, true)
+	addr := wallet.Wallet.GetWalletAddressByPublicKey(sharedStakedPublicKey, true)
 	if addr != nil && addr.PrivateKey == nil {
 		reply.Result = true
 		return
@@ -99,7 +100,7 @@ func (api *DelegatorNode) DelegatorNotify(r *http.Request, args *ApiDelegatorNod
 		return errors.New("Your stake is not accepted because you will need at least the minimum staking amount")
 	}
 
-	if err = api.wallet.AddSharedStakedAddress(&wallet_address.WalletAddress{
+	if err = wallet.Wallet.AddSharedStakedAddress(&wallet_address.WalletAddress{
 		wallet_address.VERSION_NORMAL,
 		"Delegated Stake",
 		0,

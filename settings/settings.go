@@ -7,53 +7,55 @@ import (
 	"sync"
 )
 
-type Settings struct {
+type settings struct {
 	Name         string `json:"name"  msgpack:"name"`
 	sync.RWMutex `json:"-"  msgpack:"-"`
 }
 
-func SettingsInit() (*Settings, error) {
+var Settings *settings
 
-	settings := &Settings{}
-	if err := settings.loadSettings(); err != nil {
-		if err.Error() != "Settings doesn't exist" {
-			return nil, err
-		}
-		if err = settings.createEmptySettings(); err != nil {
-			return nil, err
-		}
-	}
+func (self *settings) createEmptySettings() (err error) {
+	self.Lock()
+	defer self.Unlock()
 
-	var changed bool
-	if arguments.Arguments["--node-name"] != nil {
-		settings.Name = arguments.Arguments["--node-name"].(string)
-		changed = true
-	}
+	self.Name = helpers.RandString(10)
 
-	if changed {
-		settings.updateSettings()
-		if err := settings.saveSettings(); err != nil {
-			return nil, err
-		}
-	}
-
-	gui.GUI.Log("Settings Initialized")
-	return settings, nil
-}
-
-func (settings *Settings) createEmptySettings() (err error) {
-	settings.Lock()
-	defer settings.Unlock()
-
-	settings.Name = helpers.RandString(10)
-
-	settings.updateSettings()
-	if err = settings.saveSettings(); err != nil {
+	self.updateSettings()
+	if err = self.saveSettings(); err != nil {
 		return
 	}
 	return
 }
 
-func (settings *Settings) updateSettings() {
-	gui.GUI.InfoUpdate("Node", settings.Name)
+func (self *settings) updateSettings() {
+	gui.GUI.InfoUpdate("Node", self.Name)
+}
+
+func Initialize() error {
+
+	Settings = &settings{}
+	if err := Settings.loadSettings(); err != nil {
+		if err.Error() != "Settings doesn't exist" {
+			return err
+		}
+		if err = Settings.createEmptySettings(); err != nil {
+			return err
+		}
+	}
+
+	var changed bool
+	if arguments.Arguments["--node-name"] != nil {
+		Settings.Name = arguments.Arguments["--node-name"].(string)
+		changed = true
+	}
+
+	if changed {
+		Settings.updateSettings()
+		if err := Settings.saveSettings(); err != nil {
+			return err
+		}
+	}
+
+	gui.GUI.Log("Settings Initialized")
+	return nil
 }

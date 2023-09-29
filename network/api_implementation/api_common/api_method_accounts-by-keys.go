@@ -10,6 +10,7 @@ import (
 	"pandora-pay/blockchain/data_storage/registrations/registration"
 	"pandora-pay/cryptography/crypto"
 	"pandora-pay/helpers"
+	"pandora-pay/mempool"
 	"pandora-pay/network/api_code/api_code_types"
 	"pandora-pay/network/api_implementation/api_common/api_types"
 	"pandora-pay/store"
@@ -81,7 +82,7 @@ func (api *APICommon) GetAccountsByKeys(r *http.Request, args *APIAccountsByKeys
 				balancesInit[i] = acc.Balance.Amount
 			}
 		}
-		if balancesInit, err = wizard.GetZetherBalanceMultiple(publicKeys, balancesInit, args.Asset, hasRollovers, api.mempool.Txs.GetTxsOnlyList()); err != nil {
+		if balancesInit, err = wizard.GetZetherBalanceMultiple(publicKeys, balancesInit, args.Asset, hasRollovers, mempool.Mempool.Txs.GetTxsOnlyList()); err != nil {
 			return
 		}
 		for i, acc := range reply.Acc {

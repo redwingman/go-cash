@@ -5,10 +5,11 @@ import (
 	"pandora-pay/blockchain/transactions/transaction"
 	"pandora-pay/helpers/advanced_buffers"
 	"pandora-pay/helpers/recovery"
+	"pandora-pay/mempool"
 	"pandora-pay/txs_validator"
 )
 
-func (queue *BlockchainUpdatesQueue) processBlockchainUpdateNotifications() {
+func (queue *blockchainUpdatesQueue) processBlockchainUpdateNotifications() {
 	recovery.SafeGo(func() {
 
 		updatesNotificationsCn := queue.updatesNotifications.AddListener()
@@ -23,8 +24,8 @@ func (queue *BlockchainUpdatesQueue) processBlockchainUpdateNotifications() {
 	})
 }
 
-//async mempool notifications
-func (queue *BlockchainUpdatesQueue) processBlockchainUpdateMempool() {
+// async mempool notifications
+func (queue *blockchainUpdatesQueue) processBlockchainUpdateMempool() {
 	recovery.SafeGo(func() {
 
 		var err error
@@ -44,7 +45,7 @@ func (queue *BlockchainUpdatesQueue) processBlockchainUpdateMempool() {
 						hashes[i] = tx.Bloom.HashStr
 					}
 				}
-				queue.chain.mempool.RemoveInsertedTxsFromBlockchain(hashes)
+				mempool.Mempool.RemoveInsertedTxsFromBlockchain(hashes)
 			}
 
 			//let's add the transactions in the mempool
@@ -68,7 +69,7 @@ func (queue *BlockchainUpdatesQueue) processBlockchainUpdateMempool() {
 					}
 				}
 
-				queue.chain.mempool.InsertRemovedTxsFromBlockchain(removedTxs, update.newChainData.Height)
+				mempool.Mempool.InsertRemovedTxsFromBlockchain(removedTxs, update.newChainData.Height)
 			}
 
 			queue.chain.UpdateSocketsSubscriptionsTransactions.Broadcast(update.allTransactionsChanges)

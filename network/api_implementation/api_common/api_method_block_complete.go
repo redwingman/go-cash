@@ -3,6 +3,7 @@ package api_common
 import (
 	"errors"
 	"net/http"
+	"pandora-pay/blockchain"
 	"pandora-pay/blockchain/blocks/block_complete"
 	"pandora-pay/blockchain/transactions/transaction"
 	"pandora-pay/helpers"
@@ -29,7 +30,7 @@ func (api *APICommon) GetBlockComplete(r *http.Request, args *APIBlockCompleteRe
 
 	if err := store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
 		if len(args.Hash) == 0 {
-			args.Hash, err = api.ApiStore.chain.LoadBlockHash(reader, args.Height)
+			args.Hash, err = blockchain.Blockchain.LoadBlockHash(reader, args.Height)
 		}
 
 		reply.BlockComplete = &block_complete.BlockComplete{}

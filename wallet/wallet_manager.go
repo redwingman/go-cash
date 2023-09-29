@@ -12,6 +12,7 @@ import (
 	"pandora-pay/addresses"
 	"pandora-pay/blockchain/data_storage/accounts/account"
 	"pandora-pay/blockchain/data_storage/registrations/registration"
+	"pandora-pay/blockchain/forging"
 	"pandora-pay/config/config_nodes"
 	"pandora-pay/config/globals"
 	"pandora-pay/cryptography"
@@ -21,27 +22,27 @@ import (
 	"strconv"
 )
 
-func (wallet *Wallet) GetAddressesCount() int {
-	wallet.Lock.RLock()
-	defer wallet.Lock.RUnlock()
-	return len(wallet.Addresses)
+func (self *wallet) GetAddressesCount() int {
+	self.Lock.RLock()
+	defer self.Lock.RUnlock()
+	return len(self.Addresses)
 }
 
-func (wallet *Wallet) GetRandomAddress() *wallet_address.WalletAddress {
-	wallet.Lock.RLock()
-	defer wallet.Lock.RUnlock()
-	index := rand.Intn(len(wallet.Addresses))
-	return wallet.Addresses[index].Clone()
+func (self *wallet) GetRandomAddress() *wallet_address.WalletAddress {
+	self.Lock.RLock()
+	defer self.Lock.RUnlock()
+	index := rand.Intn(len(self.Addresses))
+	return self.Addresses[index].Clone()
 }
 
-func (wallet *Wallet) GetFirstStakedAddress(lock bool) (*wallet_address.WalletAddress, error) {
+func (self *wallet) GetFirstStakedAddress(lock bool) (*wallet_address.WalletAddress, error) {
 
 	if lock {
-		wallet.Lock.RLock()
+		self.Lock.RLock()
 	}
 
 	var found *wallet_address.WalletAddress
-	for _, addr := range wallet.Addresses {
+	for _, addr := range self.Addresses {
 		if addr.Staked {
 			found = addr
 			break
@@ -49,23 +50,23 @@ func (wallet *Wallet) GetFirstStakedAddress(lock bool) (*wallet_address.WalletAd
 	}
 
 	if lock {
-		wallet.Lock.RUnlock()
+		self.Lock.RUnlock()
 	}
 	if found != nil {
 		return found, nil
 	}
 
-	return wallet.AddNewAddress(true, "", true, true, true)
+	return self.AddNewAddress(true, "", true, true, true)
 }
 
-func (wallet *Wallet) GetFirstAddressForDevnetGenesisAirdrop() (string, *shared_staked.WalletAddressSharedStakedAddressExported, error) {
+func (self *wallet) GetFirstAddressForDevnetGenesisAirdrop() (string, *shared_staked.WalletAddressSharedStakedAddressExported, error) {
 
-	addr, err := wallet.GetFirstStakedAddress(true)
+	addr, err := self.GetFirstStakedAddress(true)
 	if err != nil {
 		return "", nil, err
 	}
 
-	sharedStakedAddress, err := wallet.exportSharedStakedAddress(addr, "", false)
+	sharedStakedAddress, err := self.exportSharedStakedAddress(addr, "", false)
 	if err != nil {
 		return "", nil, err
 	}
@@ -73,14 +74,14 @@ func (wallet *Wallet) GetFirstAddressForDevnetGenesisAirdrop() (string, *shared_
 	return addr.AddressRegistrationEncoded, sharedStakedAddress, nil
 }
 
-func (wallet *Wallet) GetWalletAddressByEncodedAddress(addressEncoded string, lock bool) (*wallet_address.WalletAddress, error) {
+func (self *wallet) GetWalletAddressByEncodedAddress(addressEncoded string, lock bool) (*wallet_address.WalletAddress, error) {
 
 	address, err := addresses.DecodeAddr(addressEncoded)
 	if err != nil {
 		return nil, err
 	}
 
-	addr := wallet.GetWalletAddressByPublicKey(address.PublicKey, lock)
+	addr := self.GetWalletAddressByPublicKey(address.PublicKey, lock)
 	if addr == nil {
 		return nil, errors.New("Address was not found")
 	}
@@ -88,25 +89,25 @@ func (wallet *Wallet) GetWalletAddressByEncodedAddress(addressEncoded string, lo
 	return addr, nil
 }
 
-func (wallet *Wallet) GetWalletAddressByPublicKeyString(publicKeyStr string, lock bool) (*wallet_address.WalletAddress, error) {
+func (self *wallet) GetWalletAddressByPublicKeyString(publicKeyStr string, lock bool) (*wallet_address.WalletAddress, error) {
 	publicKey, err := base64.StdEncoding.DecodeString(publicKeyStr)
 	if err != nil {
 		return nil, err
 	}
-	return wallet.GetWalletAddressByPublicKey(publicKey, lock), nil
+	return self.GetWalletAddressByPublicKey(publicKey, lock), nil
 }
 
-func (wallet *Wallet) GetWalletAddressByPublicKey(publicKey []byte, lock bool) *wallet_address.WalletAddress {
+func (self *wallet) GetWalletAddressByPublicKey(publicKey []byte, lock bool) *wallet_address.WalletAddress {
 
 	if lock {
-		wallet.Lock.RLock()
-		defer wallet.Lock.RUnlock()
+		self.Lock.RLock()
+		defer self.Lock.RUnlock()
 	}
 
-	return wallet.addressesMap[string(publicKey)].Clone()
+	return self.addressesMap[string(publicKey)].Clone()
 }
 
-func (wallet *Wallet) ImportSecretKey(name string, secret []byte, staked, spendRequired bool) (*wallet_address.WalletAddress, error) {
+func (self *wallet) ImportSecretKey(name string, secret []byte, staked, spendRequired bool) (*wallet_address.WalletAddress, error) {
 
 	secretChild, err := bip32.Deserialize(secret)
 	if err != nil {
@@ -115,7 +116,7 @@ func (wallet *Wallet) ImportSecretKey(name string, secret []byte, staked, spendR
 
 	start := bip32.FirstHardenedChild
 
-	if wallet.nonHardening { //non hardened
+	if self.nonHardening { //non hardened
 		start = 0
 	}
 
@@ -149,24 +150,24 @@ func (wallet *Wallet) ImportSecretKey(name string, secret []byte, staked, spendR
 		IsMine:          true,
 	}
 
-	if err = wallet.AddAddress(addr, staked, spendRequired, true, false, false, true); err != nil {
+	if err = self.AddAddress(addr, staked, spendRequired, true, false, false, true); err != nil {
 		return nil, err
 	}
 
 	return addr, nil
 }
 
-func (wallet *Wallet) AddSharedStakedAddress(addr *wallet_address.WalletAddress, lock, hasAccount bool, account *account.Account, reg *registration.Registration, chainHeight uint64) (err error) {
+func (self *wallet) AddSharedStakedAddress(addr *wallet_address.WalletAddress, lock, hasAccount bool, account *account.Account, reg *registration.Registration, chainHeight uint64) (err error) {
 
 	if lock {
-		wallet.Lock.Lock()
-		defer wallet.Lock.Unlock()
+		self.Lock.Lock()
+		defer self.Lock.Unlock()
 	}
-	if !wallet.Loaded {
+	if !self.Loaded {
 		return errors.New("Wallet was not loaded!")
 	}
 
-	if wallet.Count > config_nodes.DELEGATES_MAXIMUM {
+	if self.Count > config_nodes.DELEGATES_MAXIMUM {
 		return errors.New("DELEGATES_MAXIMUM exceeded")
 	}
 
@@ -177,20 +178,20 @@ func (wallet *Wallet) AddSharedStakedAddress(addr *wallet_address.WalletAddress,
 
 	addr.AddressEncoded = address.EncodeAddr()
 
-	if wallet.addressesMap[string(addr.PublicKey)] != nil {
+	if self.addressesMap[string(addr.PublicKey)] != nil {
 		return errors.New("Address exists")
 	}
 
-	wallet.Addresses = append(wallet.Addresses, addr)
-	wallet.addressesMap[string(addr.PublicKey)] = addr
+	self.Addresses = append(self.Addresses, addr)
+	self.addressesMap[string(addr.PublicKey)] = addr
 
-	wallet.forging.Wallet.AddWallet(addr.PublicKey, addr.SharedStaked, hasAccount, account, reg, chainHeight)
+	forging.Forging.Wallet.AddWallet(addr.PublicKey, addr.SharedStaked, hasAccount, account, reg, chainHeight)
 
-	wallet.Count += 1
+	self.Count += 1
 
-	wallet.updateWallet()
+	self.updateWallet()
 
-	if err = wallet.saveWallet(len(wallet.Addresses)-1, len(wallet.Addresses), -1, false); err != nil {
+	if err = self.saveWallet(len(self.Addresses)-1, len(self.Addresses), -1, false); err != nil {
 		return
 	}
 	globals.MainEvents.BroadcastEvent("wallet/added", addr)
@@ -198,14 +199,14 @@ func (wallet *Wallet) AddSharedStakedAddress(addr *wallet_address.WalletAddress,
 	return
 }
 
-func (wallet *Wallet) AddAddress(addr *wallet_address.WalletAddress, staked, spendRequired, lock bool, incrementSeedIndex, incrementImportedCountIndex, save bool) (err error) {
+func (self *wallet) AddAddress(addr *wallet_address.WalletAddress, staked, spendRequired, lock bool, incrementSeedIndex, incrementImportedCountIndex, save bool) (err error) {
 
 	if lock {
-		wallet.Lock.Lock()
-		defer wallet.Lock.Unlock()
+		self.Lock.Lock()
+		defer self.Lock.Unlock()
 	}
 
-	if !wallet.Loaded {
+	if !self.Loaded {
 		return errors.New("Wallet was not loaded!")
 	}
 
@@ -245,31 +246,31 @@ func (wallet *Wallet) AddAddress(addr *wallet_address.WalletAddress, staked, spe
 		}
 	}
 
-	if wallet.addressesMap[string(addr.PublicKey)] != nil {
+	if self.addressesMap[string(addr.PublicKey)] != nil {
 		return errors.New("Address exists")
 	}
 
-	wallet.Addresses = append(wallet.Addresses, addr)
-	wallet.addressesMap[string(addr.PublicKey)] = addr
+	self.Addresses = append(self.Addresses, addr)
+	self.addressesMap[string(addr.PublicKey)] = addr
 
-	wallet.Count += 1
+	self.Count += 1
 
 	if incrementSeedIndex {
-		wallet.SeedIndex += 1
+		self.SeedIndex += 1
 	}
 	if incrementImportedCountIndex {
-		addr.Name = "Imported Address " + strconv.Itoa(wallet.CountImportedIndex)
-		wallet.CountImportedIndex += 1
+		addr.Name = "Imported Address " + strconv.Itoa(self.CountImportedIndex)
+		self.CountImportedIndex += 1
 	}
 
-	if err = wallet.forging.Wallet.AddWallet(addr.PublicKey, addr.SharedStaked, false, nil, nil, 0); err != nil {
+	if err = forging.Forging.Wallet.AddWallet(addr.PublicKey, addr.SharedStaked, false, nil, nil, 0); err != nil {
 		return
 	}
 
 	if save {
-		wallet.updateWallet()
+		self.updateWallet()
 
-		if err = wallet.saveWallet(len(wallet.Addresses)-1, len(wallet.Addresses), -1, false); err != nil {
+		if err = self.saveWallet(len(self.Addresses)-1, len(self.Addresses), -1, false); err != nil {
 			return
 		}
 		globals.MainEvents.BroadcastEvent("wallet/added", addr)
@@ -279,19 +280,19 @@ func (wallet *Wallet) AddAddress(addr *wallet_address.WalletAddress, staked, spe
 
 }
 
-func (wallet *Wallet) GenerateKeys(seedIndex uint32, lock bool) ([]byte, []byte, []byte, error) {
+func (self *wallet) GenerateKeys(seedIndex uint32, lock bool) ([]byte, []byte, []byte, error) {
 
 	if lock {
-		wallet.Lock.Lock()
-		defer wallet.Lock.Unlock()
+		self.Lock.Lock()
+		defer self.Lock.Unlock()
 	}
 
-	if !wallet.Loaded {
+	if !self.Loaded {
 		return nil, nil, nil, errors.New("Wallet was not loaded!")
 	}
 
 	seedExtend := &addresses.SeedExtended{}
-	if err := seedExtend.Deserialize(wallet.Seed); err != nil {
+	if err := seedExtend.Deserialize(self.Seed); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -302,7 +303,7 @@ func (wallet *Wallet) GenerateKeys(seedIndex uint32, lock bool) ([]byte, []byte,
 
 	start := bip32.FirstHardenedChild
 
-	if seedExtend.Version == addresses.SIMPLE_PRIVATE_KEY || wallet.nonHardening { //non hardening
+	if seedExtend.Version == addresses.SIMPLE_PRIVATE_KEY || self.nonHardening { //non hardening
 		start = 0
 	}
 
@@ -329,19 +330,19 @@ func (wallet *Wallet) GenerateKeys(seedIndex uint32, lock bool) ([]byte, []byte,
 	return secretSerialized, key2.Key, key3.Key, nil
 }
 
-func (wallet *Wallet) GenerateNextAddress(lock bool) (*addresses.Address, error) {
+func (self *wallet) GenerateNextAddress(lock bool) (*addresses.Address, error) {
 
 	//avoid generating the same address twice
 	if lock {
-		wallet.Lock.RLock()
-		defer wallet.Lock.RUnlock()
+		self.Lock.RLock()
+		defer self.Lock.RUnlock()
 	}
 
-	if !wallet.Loaded {
+	if !self.Loaded {
 		return nil, errors.New("Wallet was not loaded!")
 	}
 
-	_, privateKey, _, err := wallet.GenerateKeys(wallet.SeedIndex, false)
+	_, privateKey, _, err := self.GenerateKeys(self.SeedIndex, false)
 	if err != nil {
 		return nil, err
 	}
@@ -354,21 +355,21 @@ func (wallet *Wallet) GenerateNextAddress(lock bool) (*addresses.Address, error)
 	return privKey.GenerateAddress(false, nil, true, nil, 0, nil)
 }
 
-func (wallet *Wallet) AddNewAddress(lock bool, name string, staked, spendRequired, save bool) (*wallet_address.WalletAddress, error) {
+func (self *wallet) AddNewAddress(lock bool, name string, staked, spendRequired, save bool) (*wallet_address.WalletAddress, error) {
 
 	//avoid generating the same address twice
 	if lock {
-		wallet.Lock.Lock()
-		defer wallet.Lock.Unlock()
+		self.Lock.Lock()
+		defer self.Lock.Unlock()
 	}
 
 	version := wallet_address.VERSION_NORMAL
 
-	if !wallet.Loaded {
+	if !self.Loaded {
 		return nil, errors.New("Wallet was not loaded!")
 	}
 
-	secret, privateKey, spendPrivateKey, err := wallet.GenerateKeys(wallet.SeedIndex, false)
+	secret, privateKey, spendPrivateKey, err := self.GenerateKeys(self.SeedIndex, false)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +385,7 @@ func (wallet *Wallet) AddNewAddress(lock bool, name string, staked, spendRequire
 	}
 
 	if name == "" {
-		name = "Addr_" + strconv.FormatUint(uint64(wallet.SeedIndex), 10)
+		name = "Addr_" + strconv.FormatUint(uint64(self.SeedIndex), 10)
 	}
 
 	addr := &wallet_address.WalletAddress{
@@ -393,46 +394,46 @@ func (wallet *Wallet) AddNewAddress(lock bool, name string, staked, spendRequire
 		SecretKey:       secret,
 		PrivateKey:      privKey,
 		SpendPrivateKey: spendPrivKey,
-		SeedIndex:       wallet.SeedIndex,
+		SeedIndex:       self.SeedIndex,
 		IsMine:          true,
 	}
 
-	if err = wallet.AddAddress(addr, staked, spendRequired, false, true, false, save); err != nil {
+	if err = self.AddAddress(addr, staked, spendRequired, false, true, false, save); err != nil {
 		return nil, err
 	}
 
 	return addr.Clone(), nil
 }
 
-func (wallet *Wallet) RemoveAddressByIndex(index int, lock bool) (bool, error) {
+func (self *wallet) RemoveAddressByIndex(index int, lock bool) (bool, error) {
 
 	if lock {
-		wallet.Lock.Lock()
-		defer wallet.Lock.Unlock()
+		self.Lock.Lock()
+		defer self.Lock.Unlock()
 	}
 
-	if !wallet.Loaded {
+	if !self.Loaded {
 		return false, errors.New("Wallet was not loaded!")
 	}
 
-	if index < 0 || index > len(wallet.Addresses) {
+	if index < 0 || index > len(self.Addresses) {
 		return false, errors.New("Invalid Address Index")
 	}
 
-	adr := wallet.Addresses[index]
+	adr := self.Addresses[index]
 
-	removing := wallet.Addresses[index]
+	removing := self.Addresses[index]
 
-	wallet.Addresses[index] = wallet.Addresses[len(wallet.Addresses)-1]
-	wallet.Addresses = wallet.Addresses[:len(wallet.Addresses)-1]
-	delete(wallet.addressesMap, string(adr.PublicKey))
+	self.Addresses[index] = self.Addresses[len(self.Addresses)-1]
+	self.Addresses = self.Addresses[:len(self.Addresses)-1]
+	delete(self.addressesMap, string(adr.PublicKey))
 
-	wallet.Count -= 1
+	self.Count -= 1
 
-	wallet.forging.Wallet.RemoveWallet(removing.PublicKey, false, nil, nil, 0)
+	forging.Forging.Wallet.RemoveWallet(removing.PublicKey, false, nil, nil, 0)
 
-	wallet.updateWallet()
-	if err := wallet.saveWallet(index, index+1, wallet.Count, false); err != nil {
+	self.updateWallet()
+	if err := self.saveWallet(index, index+1, self.Count, false); err != nil {
 		return false, err
 	}
 	globals.MainEvents.BroadcastEvent("wallet/removed", adr)
@@ -440,82 +441,82 @@ func (wallet *Wallet) RemoveAddressByIndex(index int, lock bool) (bool, error) {
 	return true, nil
 }
 
-func (wallet *Wallet) RemoveAddress(encodedAddress string, lock bool) (bool, error) {
+func (self *wallet) RemoveAddress(encodedAddress string, lock bool) (bool, error) {
 
 	addr, err := addresses.DecodeAddr(encodedAddress)
 	if err != nil {
 		return false, err
 	}
 
-	return wallet.RemoveAddressByPublicKey(addr.PublicKey, lock)
+	return self.RemoveAddressByPublicKey(addr.PublicKey, lock)
 }
 
-func (wallet *Wallet) RemoveAddressByPublicKey(publicKey []byte, lock bool) (bool, error) {
+func (self *wallet) RemoveAddressByPublicKey(publicKey []byte, lock bool) (bool, error) {
 
 	if lock {
-		wallet.Lock.Lock()
-		defer wallet.Lock.Unlock()
+		self.Lock.Lock()
+		defer self.Lock.Unlock()
 	}
 
-	if !wallet.Loaded {
+	if !self.Loaded {
 		return false, errors.New("Wallet was not loaded!")
 	}
 
-	for i, addr := range wallet.Addresses {
+	for i, addr := range self.Addresses {
 		if bytes.Equal(addr.PublicKey, publicKey) {
-			return wallet.RemoveAddressByIndex(i, false)
+			return self.RemoveAddressByIndex(i, false)
 		}
 	}
 
 	return false, nil
 }
 
-func (wallet *Wallet) RenameAddressByPublicKey(publicKey []byte, newName string, lock bool) (bool, error) {
+func (self *wallet) RenameAddressByPublicKey(publicKey []byte, newName string, lock bool) (bool, error) {
 
 	if lock {
-		wallet.Lock.Lock()
-		defer wallet.Lock.Unlock()
+		self.Lock.Lock()
+		defer self.Lock.Unlock()
 	}
 
-	if !wallet.Loaded {
+	if !self.Loaded {
 		return false, errors.New("Wallet was not loaded!")
 	}
 
-	addr := wallet.GetWalletAddressByPublicKey(publicKey, false)
+	addr := self.GetWalletAddressByPublicKey(publicKey, false)
 	if addr == nil {
 		return false, nil
 	}
 
 	addr.Name = newName
 
-	return true, wallet.saveWalletAddress(addr, false)
+	return true, self.saveWalletAddress(addr, false)
 }
 
-func (wallet *Wallet) GetWalletAddress(index int, lock bool) (*wallet_address.WalletAddress, error) {
+func (self *wallet) GetWalletAddress(index int, lock bool) (*wallet_address.WalletAddress, error) {
 
 	if lock {
-		wallet.Lock.RLock()
-		defer wallet.Lock.RUnlock()
+		self.Lock.RLock()
+		defer self.Lock.RUnlock()
 	}
 
-	if index < 0 || index >= len(wallet.Addresses) {
+	if index < 0 || index >= len(self.Addresses) {
 		return nil, errors.New("Invalid Address Index")
 	}
-	return wallet.Addresses[index].Clone(), nil
+	return self.Addresses[index].Clone(), nil
 }
 
-func (wallet *Wallet) GetAddressSecretKey(index int) ([]byte, error) { //32 byte
+func (self *wallet) GetAddressSecretKey(index int) ([]byte, error) { //32 byte
 
-	wallet.Lock.RLock()
-	defer wallet.Lock.RUnlock()
+	self.Lock.RLock()
+	defer self.Lock.RUnlock()
 
-	if index < 0 || index > len(wallet.Addresses) {
+	if index < 0 || index > len(self.Addresses) {
 		return nil, errors.New("Invalid Address Index")
 	}
-	return wallet.Addresses[index].SecretKey, nil
+	return self.Addresses[index].SecretKey, nil
 }
 
-func (wallet *Wallet) ImportWalletAddressJSON(data []byte) (*wallet_address.WalletAddress, error) {
+func (self *wallet) ImportWalletAddressJSON(data []byte) (*wallet_address.WalletAddress, error) {
 
 	addr := &wallet_address.WalletAddress{}
 	if err := json.Unmarshal(data, addr); err != nil {
@@ -526,12 +527,12 @@ func (wallet *Wallet) ImportWalletAddressJSON(data []byte) (*wallet_address.Wall
 		return nil, errors.New("Private Key is missing")
 	}
 
-	wallet.Lock.RLock()
-	defer wallet.Lock.RUnlock()
+	self.Lock.RLock()
+	defer self.Lock.RUnlock()
 
 	isMine := false
-	if wallet.SeedIndex != 0 {
-		key, _, _, err := wallet.GenerateKeys(addr.SeedIndex, false)
+	if self.SeedIndex != 0 {
+		key, _, _, err := self.GenerateKeys(addr.SeedIndex, false)
 		if err == nil && key != nil && bytes.Equal(key, addr.PrivateKey.Key) {
 			isMine = true
 		}
@@ -543,14 +544,14 @@ func (wallet *Wallet) ImportWalletAddressJSON(data []byte) (*wallet_address.Wall
 	}
 	addr.IsMine = true
 
-	if err := wallet.AddAddress(addr, addr.Staked, addr.SpendRequired, false, false, isMine, true); err != nil {
+	if err := self.AddAddress(addr, addr.Staked, addr.SpendRequired, false, false, isMine, true); err != nil {
 		return nil, err
 	}
 
 	return addr, nil
 }
 
-func (wallet *Wallet) DecryptBalance(addr *wallet_address.WalletAddress, encryptedBalance, asset []byte, useNewPreviousValue bool, newPreviousValue uint64, store bool, ctx context.Context, statusCallback func(string)) (uint64, error) {
+func (self *wallet) DecryptBalance(addr *wallet_address.WalletAddress, encryptedBalance, asset []byte, useNewPreviousValue bool, newPreviousValue uint64, store bool, ctx context.Context, statusCallback func(string)) (uint64, error) {
 
 	if len(encryptedBalance) == 0 {
 		return 0, errors.New("Encrypted Balance is nil")
@@ -559,31 +560,31 @@ func (wallet *Wallet) DecryptBalance(addr *wallet_address.WalletAddress, encrypt
 	return address_balance_decrypter.Decrypter.DecryptBalance("wallet", addr.PublicKey, addr.PrivateKey.Key, encryptedBalance, asset, useNewPreviousValue, newPreviousValue, store, ctx, statusCallback)
 }
 
-func (wallet *Wallet) DecryptBalanceByPublicKey(publicKey []byte, encryptedBalance, asset []byte, useNewPreviousValue bool, newPreviousValue uint64, store, lock bool, ctx context.Context, statusCallback func(string)) (uint64, error) {
+func (self *wallet) DecryptBalanceByPublicKey(publicKey []byte, encryptedBalance, asset []byte, useNewPreviousValue bool, newPreviousValue uint64, store, lock bool, ctx context.Context, statusCallback func(string)) (uint64, error) {
 
-	addr := wallet.GetWalletAddressByPublicKey(publicKey, lock)
+	addr := self.GetWalletAddressByPublicKey(publicKey, lock)
 	if addr == nil {
 		return 0, errors.New("address was not found")
 	}
 
-	return wallet.DecryptBalance(addr, encryptedBalance, asset, useNewPreviousValue, newPreviousValue, store, ctx, statusCallback)
+	return self.DecryptBalance(addr, encryptedBalance, asset, useNewPreviousValue, newPreviousValue, store, ctx, statusCallback)
 }
 
-func (wallet *Wallet) TryDecryptBalanceByPublicKey(publicKey []byte, encryptedBalance []byte, lock bool, matchValue uint64) (bool, error) {
+func (self *wallet) TryDecryptBalanceByPublicKey(publicKey []byte, encryptedBalance []byte, lock bool, matchValue uint64) (bool, error) {
 
 	if len(encryptedBalance) == 0 {
 		return false, errors.New("Encrypted Balance is nil")
 	}
 
-	addr := wallet.GetWalletAddressByPublicKey(publicKey, lock)
+	addr := self.GetWalletAddressByPublicKey(publicKey, lock)
 	if addr == nil {
 		return false, errors.New("address was not found")
 	}
 
-	return wallet.TryDecryptBalance(addr, encryptedBalance, matchValue)
+	return self.TryDecryptBalance(addr, encryptedBalance, matchValue)
 }
 
-func (wallet *Wallet) TryDecryptBalance(addr *wallet_address.WalletAddress, encryptedBalance []byte, matchValue uint64) (bool, error) {
+func (self *wallet) TryDecryptBalance(addr *wallet_address.WalletAddress, encryptedBalance []byte, matchValue uint64) (bool, error) {
 	balance, err := new(crypto.ElGamal).Deserialize(encryptedBalance)
 	if err != nil {
 		return false, err
@@ -592,45 +593,45 @@ func (wallet *Wallet) TryDecryptBalance(addr *wallet_address.WalletAddress, encr
 	return addr.PrivateKey.TryDecryptBalance(balance, matchValue), nil
 }
 
-func (wallet *Wallet) ImportWalletJSON(data []byte) (err error) {
+func (self *wallet) ImportWalletJSON(data []byte) (err error) {
 
-	wallet2 := createWallet(wallet.forging, wallet.mempool, wallet.updateNewChainUpdate)
+	wallet2 := createWalletInstance(self.updateNewChainUpdate)
 	if err = json.Unmarshal(data, wallet2); err != nil {
 		return errors.New("Error unmarshaling wallet")
 	}
 
-	wallet.Lock.Lock()
-	defer wallet.Lock.Unlock()
+	self.Lock.Lock()
+	defer self.Lock.Unlock()
 
-	wallet.clearWallet()
-	if err = json.Unmarshal(data, wallet); err != nil {
+	self.clearWallet()
+	if err = json.Unmarshal(data, self); err != nil {
 		return errors.New("Error unmarshaling wallet 2")
 	}
 
-	wallet.addressesMap = make(map[string]*wallet_address.WalletAddress)
-	for _, adr := range wallet.Addresses {
-		wallet.addressesMap[string(adr.PublicKey)] = adr
+	self.addressesMap = make(map[string]*wallet_address.WalletAddress)
+	for _, adr := range self.Addresses {
+		self.addressesMap[string(adr.PublicKey)] = adr
 	}
-	wallet.setLoaded(true)
+	self.setLoaded(true)
 
-	globals.MainEvents.BroadcastEvent("wallet/loaded", wallet.Count)
+	globals.MainEvents.BroadcastEvent("wallet/loaded", self.Count)
 
-	return wallet.saveWalletEntire(false)
+	return self.saveWalletEntire(false)
 }
 
-func (wallet *Wallet) GetDelegatesCount() int {
-	wallet.Lock.RLock()
-	defer wallet.Lock.RUnlock()
+func (self *wallet) GetDelegatesCount() int {
+	self.Lock.RLock()
+	defer self.Lock.RUnlock()
 
-	return wallet.DelegatesCount
+	return self.DelegatesCount
 }
 
-func (wallet *Wallet) SetNonHardening(value bool) {
-	wallet.Lock.Lock()
-	defer wallet.Lock.Unlock()
-	wallet.nonHardening = value
+func (self *wallet) SetNonHardening(value bool) {
+	self.Lock.Lock()
+	defer self.Lock.Unlock()
+	self.nonHardening = value
 }
 
-func (wallet *Wallet) Close() {
+func (self *wallet) Close() {
 
 }

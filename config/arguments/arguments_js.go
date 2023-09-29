@@ -6,7 +6,7 @@ package arguments
 const commands = `PANDORA CASH WASM.
 
 Usage:
-  pandorapay [--pprof] [--version] [--network=network] [--debug] [--gui-type=type] [--forging] [--new-devnet] [--node-name=name] [--set-genesis=genesis] [--store-wallet-type=type] [--store-chain-type=type] [--node-consensus=type] [--tcp-max-clients=limit] [--node-provide-extended-info-app=bool] [--wallet-encrypt=args] [--wallet-decrypt=password] [--wallet-remove-encryption] [--wallet-export-shared-staked-address=args] [--wallet-import-secret-mnemonic=mnemonic] [--wallet-import-secret-entropy=entropy] [--instance=prefix] [--instance-id=id] [--balance-decryptor-disable-init] [--tcp-connections-ready=threshold] [--exit]
+  pandorapay [--pprof] [--version] [--network=network] [--debug] [--gui-type=type] [--forging] [--new-devnet] [--node-name=name] [--set-genesis=genesis] [--store-wallet-type=type] [--store-chain-type=type] [--node-consensus=type] [--tcp-max-clients=limit] [--node-provide-extended-info-app=bool] [--wallet-encrypt=args] [--wallet-decrypt=password] [--wallet-remove-encryption] [--wallet-export-shared-staked-address=args] [--wallet-import-secret-mnemonic=mnemonic] [--wallet-import-secret-entropy=entropy] [--instance=prefix] [--instance-id=id] [--balance-decrypter-disable-init] [--tcp-connections-ready=threshold] [--exit]
   pandorapay -h | --help
   pandorapay -v | --version
 
@@ -33,6 +33,6 @@ Options:
   --wallet-decrypt=password                          Decrypt wallet.
   --wallet-remove-encryption                         Remove wallet encryption.
   --wallet-export-shared-staked-address=args         Derive and export Staked address. Argument must be "account,nonce,path".
-  --balance-decryptor-disable-init                   Disable first balance decryptor initialization. 
+  --balance-decrypter-disable-init                   Disable first balance decrypter initialization. 
   --exit                                             Exit node.
 `

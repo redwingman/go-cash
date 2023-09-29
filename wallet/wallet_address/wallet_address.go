@@ -26,76 +26,76 @@ type WalletAddress struct {
 	AddressRegistrationEncoded string                                   `json:"addressRegistrationEncoded" msgpack:"addressRegistrationEncoded"`
 }
 
-func (addr *WalletAddress) DeriveSharedStaked() (*shared_staked.WalletAddressSharedStaked, error) {
+func (self *WalletAddress) DeriveSharedStaked() (*shared_staked.WalletAddressSharedStaked, error) {
 
-	if addr.PrivateKey == nil {
+	if self.PrivateKey == nil {
 		return nil, errors.New("Private Key is missing")
 	}
 
 	return &shared_staked.WalletAddressSharedStaked{
-		PrivateKey: addr.PrivateKey,
-		PublicKey:  addr.PublicKey,
+		PrivateKey: self.PrivateKey,
+		PublicKey:  self.PublicKey,
 	}, nil
 
 }
 
-func (addr *WalletAddress) GetAddress(registered bool) string {
+func (self *WalletAddress) GetAddress(registered bool) string {
 	if registered {
-		return addr.AddressEncoded
+		return self.AddressEncoded
 	}
-	return addr.AddressRegistrationEncoded
+	return self.AddressRegistrationEncoded
 }
 
-func (addr *WalletAddress) DecryptMessage(message []byte) ([]byte, error) {
-	if addr.PrivateKey == nil {
+func (self *WalletAddress) DecryptMessage(message []byte) ([]byte, error) {
+	if self.PrivateKey == nil {
 		return nil, errors.New("Private Key is missing")
 	}
-	return addr.PrivateKey.Decrypt(message)
+	return self.PrivateKey.Decrypt(message)
 }
 
-func (addr *WalletAddress) SignMessage(message []byte) ([]byte, error) {
-	if addr.PrivateKey == nil {
+func (self *WalletAddress) SignMessage(message []byte) ([]byte, error) {
+	if self.PrivateKey == nil {
 		return nil, errors.New("Private Key is missing")
 	}
-	return addr.PrivateKey.Sign(message)
+	return self.PrivateKey.Sign(message)
 }
 
-func (addr *WalletAddress) VerifySignedMessage(message, signature []byte) (bool, error) {
-	address, err := addresses.DecodeAddr(addr.GetAddress(false))
+func (self *WalletAddress) VerifySignedMessage(message, signature []byte) (bool, error) {
+	address, err := addresses.DecodeAddr(self.GetAddress(false))
 	if err != nil {
 		return false, err
 	}
 	return address.VerifySignedMessage(message, signature), nil
 }
 
-func (addr *WalletAddress) Clone() *WalletAddress {
+func (self *WalletAddress) Clone() *WalletAddress {
 
-	if addr == nil {
+	if self == nil {
 		return nil
 	}
 
 	var sharedStaked *shared_staked.WalletAddressSharedStaked
-	if addr.SharedStaked != nil {
-		sharedStaked = &shared_staked.WalletAddressSharedStaked{addr.SharedStaked.PrivateKey, addr.SharedStaked.PublicKey}
+	if self.SharedStaked != nil {
+		sharedStaked = &shared_staked.WalletAddressSharedStaked{self.SharedStaked.PrivateKey, self.SharedStaked.PublicKey}
 	}
 
 	return &WalletAddress{
-		addr.Version,
-		addr.Name,
-		addr.SeedIndex,
-		addr.IsMine,
-		addr.IsImported,
-		addr.SecretKey,
-		addr.PrivateKey,
-		addr.SpendPrivateKey,
-		addr.Registration,
-		addr.PublicKey,
-		addr.Staked,
-		addr.SpendRequired,
-		addr.SpendPublicKey,
-		addr.IsSharedStaked,
+		self.Version,
+		self.Name,
+		self.SeedIndex,
+		self.IsMine,
+		self.IsImported,
+		self.SecretKey,
+		self.PrivateKey,
+		self.SpendPrivateKey,
+		self.Registration,
+		self.PublicKey,
+		self.Staked,
+		self.SpendRequired,
+		self.SpendPublicKey,
+		self.IsSharedStaked,
 		sharedStaked,
-		addr.AddressEncoded,
-		addr.AddressRegistrationEncoded,
+		self.AddressEncoded,
+		self.AddressRegistrationEncoded,
 	}
 }

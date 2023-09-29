@@ -18,9 +18,9 @@ const (
 	CONTINUE_PROCESSING_NO_ERROR
 )
 
-func (mempool *Mempool) ExistsTxSimpleVersion(publicKey []byte, version transaction_simple.ScriptType) bool {
+func (self *mempool) ExistsTxSimpleVersion(publicKey []byte, version transaction_simple.ScriptType) bool {
 
-	txs := mempool.Txs.GetTxsList()
+	txs := self.Txs.GetTxsList()
 	if txs == nil {
 		return false
 	}
@@ -36,9 +36,9 @@ func (mempool *Mempool) ExistsTxSimpleVersion(publicKey []byte, version transact
 	return false
 }
 
-func (mempool *Mempool) ExistsTxZetherVersion(publicKey []byte, version transaction_zether_payload_script.PayloadScriptType) bool {
+func (self *mempool) ExistsTxZetherVersion(publicKey []byte, version transaction_zether_payload_script.PayloadScriptType) bool {
 
-	txs := mempool.Txs.GetTxsList()
+	txs := self.Txs.GetTxsList()
 	if txs == nil {
 		return false
 	}
@@ -60,9 +60,9 @@ func (mempool *Mempool) ExistsTxZetherVersion(publicKey []byte, version transact
 	return false
 }
 
-func (mempool *Mempool) CountInputTxs(publicKey []byte) uint64 {
+func (self *mempool) CountInputTxs(publicKey []byte) uint64 {
 
-	txs := mempool.Txs.GetTxsList()
+	txs := self.Txs.GetTxsList()
 
 	count := uint64(0)
 	for _, tx := range txs {
@@ -87,9 +87,9 @@ func (mempool *Mempool) CountInputTxs(publicKey []byte) uint64 {
 	return count
 }
 
-func (mempool *Mempool) GetNonce(publicKey []byte, nonce uint64) uint64 {
+func (self *mempool) GetNonce(publicKey []byte, nonce uint64) uint64 {
 
-	txs := mempool.Txs.GetTxsList()
+	txs := self.Txs.GetTxsList()
 
 	nonces := make(map[uint64]bool)
 	for _, tx := range txs {
@@ -112,9 +112,9 @@ func (mempool *Mempool) GetNonce(publicKey []byte, nonce uint64) uint64 {
 	return nonce
 }
 
-func (mempool *Mempool) GetNextTransactionsToInclude(chainHash []byte) (out []*transaction.Transaction, outChainHash []byte) {
+func (self *mempool) GetNextTransactionsToInclude(chainHash []byte) (out []*transaction.Transaction, outChainHash []byte) {
 
-	res := mempool.result.Load()
+	res := self.result.Load()
 	if res != nil {
 
 		if chainHash == nil || bytes.Equal(res.chainHash, chainHash) {

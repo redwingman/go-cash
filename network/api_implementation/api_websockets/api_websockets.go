@@ -1,11 +1,9 @@
 package api_websockets
 
 import (
-	"pandora-pay/blockchain"
 	"pandora-pay/blockchain/blockchain_sync"
 	"pandora-pay/blockchain/info"
 	"pandora-pay/config"
-	"pandora-pay/mempool"
 	"pandora-pay/network/api_code/api_code_websockets"
 	"pandora-pay/network/api_implementation/api_common"
 	"pandora-pay/network/api_implementation/api_common/api_delegator_node"
@@ -13,29 +11,22 @@ import (
 	"pandora-pay/network/api_implementation/api_websockets/consensus"
 	"pandora-pay/network/network_config"
 	"pandora-pay/network/websocks/connection"
-	"pandora-pay/settings"
 )
 
 type APIWebsockets struct {
 	GetMap    map[string]func(conn *connection.AdvancedConnection, values []byte) (interface{}, error)
 	Consensus *consensus.Consensus
-	chain     *blockchain.Blockchain
-	mempool   *mempool.Mempool
-	settings  *settings.Settings
 	apiCommon *api_common.APICommon
 	apiStore  *api_common.APIStore
 }
 
 var ConfigureAPIRoutes func(api *APIWebsockets)
 
-func NewWebsocketsAPI(apiStore *api_common.APIStore, apiCommon *api_common.APICommon, chain *blockchain.Blockchain, settings *settings.Settings, mempool *mempool.Mempool) *APIWebsockets {
+func NewWebsocketsAPI(apiStore *api_common.APIStore, apiCommon *api_common.APICommon) *APIWebsockets {
 
 	api := &APIWebsockets{
 		nil,
-		consensus.NewConsensus(chain, mempool),
-		chain,
-		mempool,
-		settings,
+		consensus.NewConsensus(),
 		apiCommon,
 		apiStore,
 	}

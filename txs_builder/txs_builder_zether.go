@@ -22,12 +22,14 @@ import (
 	"pandora-pay/cryptography/bn256"
 	"pandora-pay/cryptography/crypto"
 	"pandora-pay/gui"
+	"pandora-pay/mempool"
 	"pandora-pay/network/websocks/connection/advanced_connection_types"
 	"pandora-pay/store"
 	"pandora-pay/store/store_db/store_db_interface"
 	"pandora-pay/txs_builder/txs_builder_zether_helper"
 	"pandora-pay/txs_builder/wizard"
 	"pandora-pay/txs_validator"
+	"pandora-pay/wallet"
 	"pandora-pay/wallet/wallet_address"
 )
 
@@ -303,7 +305,7 @@ func (builder *TxsBuilderType) prebuild(txData *TxBuilderCreateZetherTxData, pen
 
 		} else {
 
-			addr, err := builder.wallet.GetWalletAddressByEncodedAddress(payload.Sender, true)
+			addr, err := wallet.Wallet.GetWalletAddressByEncodedAddress(payload.Sender, true)
 			if err != nil {
 				return nil, nil, nil, nil, nil, nil, 0, nil, err
 			}
@@ -577,13 +579,13 @@ func (builder *TxsBuilderType) prebuild(txData *TxBuilderCreateZetherTxData, pen
 		} else if sendersEncryptedBalances[t] != nil {
 
 			if txData.Payloads[t].DecryptedBalance > 0 { // in case it was specified to avoid getting stuck
-				decrypted, err := builder.wallet.DecryptBalance(sendersWalletAddresses[t], sendersEncryptedBalances[t], transfers[t].Asset, true, txData.Payloads[t].DecryptedBalance, true, ctx, statusCallback)
+				decrypted, err := wallet.Wallet.DecryptBalance(sendersWalletAddresses[t], sendersEncryptedBalances[t], transfers[t].Asset, true, txData.Payloads[t].DecryptedBalance, true, ctx, statusCallback)
 				if err != nil {
 					return nil, nil, nil, nil, nil, nil, 0, nil, err
 				}
 				transfers[t].SenderDecryptedBalance = decrypted
 			} else {
-				decrypted, err := builder.wallet.DecryptBalance(sendersWalletAddresses[t], sendersEncryptedBalances[t], transfers[t].Asset, false, 0, true, ctx, statusCallback)
+				decrypted, err := wallet.Wallet.DecryptBalance(sendersWalletAddresses[t], sendersEncryptedBalances[t], transfers[t].Asset, false, 0, true, ctx, statusCallback)
 				if err != nil {
 					return nil, nil, nil, nil, nil, nil, 0, nil, err
 				}
@@ -612,7 +614,7 @@ func (builder *TxsBuilderType) prebuild(txData *TxBuilderCreateZetherTxData, pen
 func (builder *TxsBuilderType) CreateZetherTx(txData *TxBuilderCreateZetherTxData, pendingTxs []*transaction.Transaction, propagateTx, awaitAnswer, awaitBroadcast bool, validateTx bool, ctx context.Context, statusCallback func(string)) (*transaction.Transaction, error) {
 
 	if pendingTxs == nil {
-		pendingTxs = builder.mempool.Txs.GetTxsOnlyList()
+		pendingTxs = mempool.Mempool.Txs.GetTxsOnlyList()
 	}
 
 	builder.lock.Lock()
@@ -638,7 +640,7 @@ func (builder *TxsBuilderType) CreateZetherTx(txData *TxBuilderCreateZetherTxDat
 	}
 
 	if propagateTx {
-		if err = builder.mempool.AddTxToMempool(tx, chainHeight, true, awaitAnswer, awaitBroadcast, advanced_connection_types.UUID_ALL, ctx); err != nil {
+		if err = mempool.Mempool.AddTxToMempool(tx, chainHeight, true, awaitAnswer, awaitBroadcast, advanced_connection_types.UUID_ALL, ctx); err != nil {
 			return nil, err
 		}
 	}
@@ -649,7 +651,7 @@ func (builder *TxsBuilderType) CreateZetherTx(txData *TxBuilderCreateZetherTxDat
 func (builder *TxsBuilderType) CreateForgingTransactions(blkComplete *block_complete.BlockComplete, forgerPublicKey []byte, decryptedBalance uint64, pendingTxs []*transaction.Transaction) (*transaction.Transaction, error) {
 
 	if pendingTxs == nil {
-		pendingTxs = builder.mempool.Txs.GetTxsOnlyList()
+		pendingTxs = mempool.Mempool.Txs.GetTxsOnlyList()
 	}
 
 	gui.GUI.Info("CreateForgingTransactions 1")

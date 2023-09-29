@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func (wallet *Wallet) processRefreshWallets() {
+func (self *wallet) processRefreshWallets() {
 
 	recovery.SafeGo(func() {
 		var err error
@@ -43,7 +43,7 @@ func (wallet *Wallet) processRefreshWallets() {
 
 					visited := make(map[string]bool)
 					for i := 0; i < 50; i++ {
-						addr := wallet.GetRandomAddress()
+						addr := self.GetRandomAddress()
 						if visited[string(addr.PublicKey)] {
 							continue
 						}
@@ -70,7 +70,7 @@ func (wallet *Wallet) processRefreshWallets() {
 				}
 
 				for i, acc := range accsList {
-					if err = wallet.refreshWalletAccount(acc, regsList[i], chainHeight, addressesList[i]); err != nil {
+					if err = self.refreshWalletAccount(acc, regsList[i], chainHeight, addressesList[i]); err != nil {
 						return
 					}
 				}

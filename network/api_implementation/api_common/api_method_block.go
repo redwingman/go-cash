@@ -2,6 +2,7 @@ package api_common
 
 import (
 	"net/http"
+	"pandora-pay/blockchain"
 	"pandora-pay/blockchain/blocks/block"
 	"pandora-pay/helpers"
 	"pandora-pay/helpers/msgpack"
@@ -28,7 +29,7 @@ func (api *APICommon) GetBlock(r *http.Request, args *APIBlockRequest, reply *AP
 	if err := store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
 
 		if len(args.Hash) == 0 {
-			if args.Hash, err = api.ApiStore.chain.LoadBlockHash(reader, args.Height); err != nil {
+			if args.Hash, err = blockchain.Blockchain.LoadBlockHash(reader, args.Height); err != nil {
 				return
 			}
 		}

@@ -33,12 +33,12 @@ type ForgingWorkerThread struct {
 	index                 int
 	workCn                chan *forging_block_work.ForgingWork
 	workerSolutionCn      chan *ForgingSolution
-	addWalletAddressCn    chan *ForgingWalletAddress
+	addWalletAddressCn    chan *forgingWalletAddress
 	removeWalletAddressCn chan string //publicKey
 }
 
 type ForgingWorkerThreadAddress struct {
-	walletAdr                       *ForgingWalletAddress
+	walletAdr                       *forgingWalletAddress
 	stakingAmount                   uint64
 	stakingNonce                    []byte
 	stakingNoncePrevChainKernelHash []byte
@@ -130,7 +130,7 @@ func (worker *ForgingWorkerThread) forge() {
 		validateWork()
 	}
 
-	newWalletAddress := func(newWalletAddr *ForgingWalletAddress) {
+	newWalletAddress := func(newWalletAddr *forgingWalletAddress) {
 		walletAddr := wallets[newWalletAddr.publicKeyStr]
 		if walletAddr == nil {
 			walletAddr = &ForgingWorkerThreadAddress{ //making sure the has a copy
@@ -298,7 +298,7 @@ func createForgingWorkerThread(index int, workerSolutionCn chan *ForgingSolution
 		index:                 index,
 		workCn:                make(chan *forging_block_work.ForgingWork),
 		workerSolutionCn:      workerSolutionCn,
-		addWalletAddressCn:    make(chan *ForgingWalletAddress, 1000),
+		addWalletAddressCn:    make(chan *forgingWalletAddress, 1000),
 		removeWalletAddressCn: make(chan string),
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"pandora-pay/app"
 	"pandora-pay/blockchain/transactions/transaction"
 	"pandora-pay/builds/webassembly/webassembly_utils"
 	"pandora-pay/mempool"
@@ -25,10 +24,10 @@ func mempoolRemoveTx(this js.Value, args []js.Value) interface{} {
 		mutex.Lock()
 		defer mutex.Unlock()
 
-		app.Mempool.SuspendProcessingCn <- struct{}{}
-		defer app.Mempool.ContinueProcessing(mempool.CONTINUE_PROCESSING_NO_ERROR_RESET)
+		mempool.Mempool.SuspendProcessingCn <- struct{}{}
+		defer mempool.Mempool.ContinueProcessing(mempool.CONTINUE_PROCESSING_NO_ERROR_RESET)
 
-		app.Mempool.RemoveInsertedTxsFromBlockchain([]string{string(hash)})
+		mempool.Mempool.RemoveInsertedTxsFromBlockchain([]string{string(hash)})
 
 		return nil, nil
 	})
@@ -45,7 +44,7 @@ func mempoolInsertTx(this js.Value, args []js.Value) interface{} {
 			return nil, err
 		}
 
-		err := app.Mempool.AddTxToMempool(tx, 0, false, true, true, advanced_connection_types.UUID_SKIP_ALL, context.Background())
+		err := mempool.Mempool.AddTxToMempool(tx, 0, false, true, true, advanced_connection_types.UUID_SKIP_ALL, context.Background())
 
 		return nil, err
 	})

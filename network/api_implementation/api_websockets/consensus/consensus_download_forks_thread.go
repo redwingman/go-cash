@@ -22,9 +22,7 @@ import (
 )
 
 type ConsensusProcessForksThread struct {
-	chain   *blockchain.Blockchain
-	forks   *Forks
-	mempool *mempool.Mempool
+	forks *Forks
 }
 
 func (thread *ConsensusProcessForksThread) downloadBlockHash(conn *connection.AdvancedConnection, fork *Fork, height uint64) ([]byte, error) {
@@ -55,7 +53,7 @@ func (thread *ConsensusProcessForksThread) downloadBlockComplete(conn *connectio
 	txsFound := 0
 	txs := make([]*transaction.Transaction, len(blkWithTx.Txs))
 	for i := range txs {
-		if tx := thread.mempool.Txs.Get(string(blkWithTx.Txs[i])); tx != nil {
+		if tx := mempool.Mempool.Txs.Get(string(blkWithTx.Txs[i])); tx != nil {
 			txs[i] = tx.Tx
 			txsFound++
 			continue
@@ -124,7 +122,7 @@ func (thread *ConsensusProcessForksThread) downloadFork(fork *Fork) bool {
 	fork.Lock()
 	defer fork.Unlock()
 
-	chainData := thread.chain.GetChainData()
+	chainData := blockchain.Blockchain.GetChainData()
 	if fork.BigTotalDifficulty.Cmp(chainData.BigTotalDifficulty) <= 0 {
 		return false
 	}
@@ -166,7 +164,7 @@ func (thread *ConsensusProcessForksThread) downloadFork(fork *Fork) bool {
 			continue
 		}
 
-		chainHash, err := thread.chain.OpenLoadBlockHash(start - 1)
+		chainHash, err := blockchain.Blockchain.OpenLoadBlockHash(start - 1)
 		if err == nil && bytes.Equal(hash, chainHash) {
 			break
 		}
@@ -259,7 +257,7 @@ func (thread *ConsensusProcessForksThread) execute() {
 							it = it.Next
 						}
 
-						if _, err := thread.chain.AddBlocks(blocks, false, advanced_connection_types.UUID_ALL); err != nil {
+						if _, err := blockchain.Blockchain.AddBlocks(blocks, false, advanced_connection_types.UUID_ALL); err != nil {
 							if config.DEBUG {
 								gui.GUI.Error("Invalid Fork", err)
 							}
@@ -287,8 +285,8 @@ func (thread *ConsensusProcessForksThread) execute() {
 					BigTotalDifficulty: fork.BigTotalDifficulty,
 				}
 
-				thread.chain.ChainData.Store(newChainData)
-				thread.mempool.UpdateWork(fork.Hash, fork.End)
+				blockchain.Blockchain.ChainData.Store(newChainData)
+				mempool.Mempool.UpdateWork(fork.Hash, fork.End)
 			}
 
 			if willRemove {
@@ -301,10 +299,8 @@ func (thread *ConsensusProcessForksThread) execute() {
 	}
 }
 
-func newConsensusProcessForksThread(forks *Forks, chain *blockchain.Blockchain, mempool *mempool.Mempool) *ConsensusProcessForksThread {
+func newConsensusProcessForksThread(forks *Forks) *ConsensusProcessForksThread {
 	return &ConsensusProcessForksThread{
-		chain,
 		forks,
-		mempool,
 	}
 }

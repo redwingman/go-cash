@@ -9,7 +9,7 @@ import (
 	"pandora-pay/store/store_db/store_db_interface"
 )
 
-func (settings *Settings) saveSettings() error {
+func (settings *settings) saveSettings() error {
 
 	return store.StoreSettings.DB.Update(func(writer store_db_interface.StoreDBTransactionInterface) (err error) {
 
@@ -28,7 +28,7 @@ func (settings *Settings) saveSettings() error {
 
 }
 
-func (settings *Settings) loadSettings() error {
+func (self *settings) loadSettings() error {
 	return store.StoreSettings.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
 
 		saved := reader.Get("saved")
@@ -39,12 +39,12 @@ func (settings *Settings) loadSettings() error {
 			gui.GUI.Log("Settings Loading... ")
 
 			unmarshal := reader.Get("settings")
-			if err = msgpack.Unmarshal(unmarshal, settings); err != nil {
+			if err = msgpack.Unmarshal(unmarshal, self); err != nil {
 				return err
 			}
 
-			settings.updateSettings()
-			gui.GUI.Log("Settings Loaded! " + settings.Name)
+			self.updateSettings()
+			gui.GUI.Log("Settings Loaded! " + self.Name)
 
 		} else {
 			err = errors.New("Error loading wallet ?")

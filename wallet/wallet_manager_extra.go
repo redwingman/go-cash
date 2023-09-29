@@ -8,20 +8,21 @@ import (
 	"pandora-pay/addresses"
 	"pandora-pay/blockchain/data_storage/accounts/account"
 	"pandora-pay/blockchain/data_storage/registrations/registration"
+	"pandora-pay/blockchain/forging"
 	"pandora-pay/config/config_coins"
 	"pandora-pay/config/config_stake"
 	"pandora-pay/gui"
 	"pandora-pay/wallet/wallet_address"
 )
 
-func (wallet *Wallet) createSeed(lock bool) error {
+func (self *wallet) createSeed(lock bool) error {
 
 	if lock {
-		wallet.Lock.Lock()
-		defer wallet.Lock.Unlock()
+		self.Lock.Lock()
+		defer self.Lock.Unlock()
 	}
 
-	if !wallet.Loaded {
+	if !self.Loaded {
 		return errors.New("Wallet was not loaded!")
 	}
 
@@ -36,7 +37,7 @@ func (wallet *Wallet) createSeed(lock bool) error {
 			continue
 		}
 
-		wallet.Mnemonic = mnemonic
+		self.Mnemonic = mnemonic
 
 		// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
 		seed, err := bip39.NewSeedWithErrorChecking(mnemonic, "SEED Secret Passphrase")
@@ -49,42 +50,42 @@ func (wallet *Wallet) createSeed(lock bool) error {
 			continue
 		}
 
-		wallet.Seed = seedExtended.Serialize()
+		self.Seed = seedExtended.Serialize()
 		return nil
 	}
 }
 
-func (wallet *Wallet) CreateEmptyWallet() (err error) {
+func (self *wallet) CreateEmptyWallet() (err error) {
 
-	wallet.Lock.Lock()
-	defer wallet.Lock.Unlock()
+	self.Lock.Lock()
+	defer self.Lock.Unlock()
 
-	wallet.clearWallet()
-	wallet.setLoaded(true)
+	self.clearWallet()
+	self.setLoaded(true)
 
-	if err = wallet.createSeed(false); err != nil {
+	if err = self.createSeed(false); err != nil {
 		return
 	}
-	if _, err = wallet.AddNewAddress(false, "", false, false, true); err != nil {
+	if _, err = self.AddNewAddress(false, "", false, false, true); err != nil {
 		return
 	}
 
 	return
 }
 
-func (wallet *Wallet) ImportMnemonic(mnemonic string) (err error) {
+func (self *wallet) ImportMnemonic(mnemonic string) (err error) {
 
-	wallet.Lock.Lock()
-	defer wallet.Lock.Unlock()
+	self.Lock.Lock()
+	defer self.Lock.Unlock()
 
-	if wallet.Mnemonic == mnemonic {
+	if self.Mnemonic == mnemonic {
 		return
 	}
 
-	wallet.clearWallet()
-	wallet.setLoaded(true)
+	self.clearWallet()
+	self.setLoaded(true)
 
-	wallet.Mnemonic = mnemonic
+	self.Mnemonic = mnemonic
 
 	seed, err := bip39.NewSeedWithErrorChecking(mnemonic, "SEED Secret Passphrase")
 	if err != nil {
@@ -96,35 +97,35 @@ func (wallet *Wallet) ImportMnemonic(mnemonic string) (err error) {
 		return
 	}
 
-	wallet.Seed = seedExtended.Serialize()
+	self.Seed = seedExtended.Serialize()
 
-	if _, err = wallet.AddNewAddress(false, "", false, false, true); err != nil {
+	if _, err = self.AddNewAddress(false, "", false, false, true); err != nil {
 		return
 	}
 
 	return
 }
 
-func (wallet *Wallet) ImportEntropy(entropy []byte) (err error) {
+func (self *wallet) ImportEntropy(entropy []byte) (err error) {
 
-	wallet.Lock.Lock()
-	defer wallet.Lock.Unlock()
+	self.Lock.Lock()
+	defer self.Lock.Unlock()
 
 	var mnemonic string
 	if mnemonic, err = bip39.NewMnemonic(entropy); err != nil {
 		return
 	}
 
-	if mnemonic == wallet.Mnemonic {
+	if mnemonic == self.Mnemonic {
 		return
 	}
 
-	wallet.clearWallet()
-	wallet.setLoaded(true)
+	self.clearWallet()
+	self.setLoaded(true)
 
-	wallet.Mnemonic = mnemonic
+	self.Mnemonic = mnemonic
 
-	seed, err := bip39.NewSeedWithErrorChecking(wallet.Mnemonic, "SEED Secret Passphrase")
+	seed, err := bip39.NewSeedWithErrorChecking(self.Mnemonic, "SEED Secret Passphrase")
 	if err != nil {
 		return err
 	}
@@ -134,21 +135,21 @@ func (wallet *Wallet) ImportEntropy(entropy []byte) (err error) {
 		return
 	}
 
-	wallet.Seed = seedExtended.Serialize()
+	self.Seed = seedExtended.Serialize()
 
-	if _, err = wallet.AddNewAddress(false, "", false, false, true); err != nil {
+	if _, err = self.AddNewAddress(false, "", false, false, true); err != nil {
 		return
 	}
 
 	return
 }
 
-func (wallet *Wallet) updateWallet() {
-	gui.GUI.InfoUpdate("Wallet Addrs", fmt.Sprintf("%d  %s", wallet.Count, wallet.Encryption.Encrypted))
+func (self *wallet) updateWallet() {
+	gui.GUI.InfoUpdate("Wallet Addrs", fmt.Sprintf("%d  %s", self.Count, self.Encryption.Encrypted))
 }
 
-//it must be locked and use original walletAddresses, not cloned ones
-func (wallet *Wallet) refreshWalletAccount(acc *account.Account, reg *registration.Registration, chainHeight uint64, addr *wallet_address.WalletAddress) (err error) {
+// it must be locked and use original walletAddresses, not cloned ones
+func (self *wallet) refreshWalletAccount(acc *account.Account, reg *registration.Registration, chainHeight uint64, addr *wallet_address.WalletAddress) (err error) {
 
 	deleted := false
 
@@ -160,7 +161,7 @@ func (wallet *Wallet) refreshWalletAccount(acc *account.Account, reg *registrati
 
 		var stakingAmount uint64
 		if stakingAmountBalance != nil {
-			stakingAmount, _ = wallet.DecryptBalance(addr, stakingAmountBalance, config_coins.NATIVE_ASSET_FULL, false, 0, true, context.Background(), func(string) {})
+			stakingAmount, _ = self.DecryptBalance(addr, stakingAmountBalance, config_coins.NATIVE_ASSET_FULL, false, 0, true, context.Background(), func(string) {})
 		}
 
 		if stakingAmount < config_stake.GetRequiredStake(chainHeight) {
@@ -171,15 +172,15 @@ func (wallet *Wallet) refreshWalletAccount(acc *account.Account, reg *registrati
 
 	if deleted {
 
-		wallet.forging.Wallet.RemoveWallet(addr.PublicKey, true, acc, reg, chainHeight)
+		forging.Forging.Wallet.RemoveWallet(addr.PublicKey, true, acc, reg, chainHeight)
 
 		if addr.IsSharedStaked {
-			_, err = wallet.RemoveAddressByPublicKey(addr.PublicKey, true)
+			_, err = self.RemoveAddressByPublicKey(addr.PublicKey, true)
 			return
 		}
 
 	} else {
-		wallet.forging.Wallet.AddWallet(addr.PublicKey, addr.SharedStaked, true, acc, reg, chainHeight)
+		forging.Forging.Wallet.AddWallet(addr.PublicKey, addr.SharedStaked, true, acc, reg, chainHeight)
 	}
 
 	return

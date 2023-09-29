@@ -16,20 +16,20 @@ import (
 	"time"
 )
 
-type MempoolAccountTxs struct {
+type mempoolAccountTxs struct {
 	txs     map[string]*mempoolTx
 	deleted bool
 	sync.RWMutex
 }
 
-type MempoolTxs struct {
+type mempoolTxs struct {
 	count                     int32
 	txsMap                    *generics.Map[string, *mempoolTx]
-	accountsMapTxs            *generics.Map[string, *MempoolAccountTxs]
+	accountsMapTxs            *generics.Map[string, *mempoolAccountTxs]
 	UpdateMempoolTransactions *multicast.MulticastChannel[*blockchain_types.MempoolTransactionUpdate]
 }
 
-func (self *MempoolTxs) insertTx(tx *mempoolTx) bool {
+func (self *mempoolTxs) insertTx(tx *mempoolTx) bool {
 	_, loaded := self.txsMap.LoadOrStore(tx.Tx.Bloom.HashStr, tx)
 	if !loaded {
 		atomic.AddInt32(&self.count, 1)
@@ -37,14 +37,14 @@ func (self *MempoolTxs) insertTx(tx *mempoolTx) bool {
 	return !loaded
 }
 
-func (self *MempoolTxs) inserted(tx *mempoolTx) {
+func (self *mempoolTxs) inserted(tx *mempoolTx) {
 	if config.NODE_PROVIDE_EXTENDED_INFO_APP {
 
 		keys := tx.Tx.GetAllKeys()
 		for key := range keys {
 
 			for {
-				foundMap, _ := self.accountsMapTxs.LoadOrStore(key, &MempoolAccountTxs{})
+				foundMap, _ := self.accountsMapTxs.LoadOrStore(key, &mempoolAccountTxs{})
 
 				foundMap.Lock()
 				if foundMap.deleted {
@@ -70,7 +70,7 @@ func (self *MempoolTxs) inserted(tx *mempoolTx) {
 	}
 }
 
-func (self *MempoolTxs) deleteTx(hashStr string) bool {
+func (self *mempoolTxs) deleteTx(hashStr string) bool {
 	_, deleted := self.txsMap.LoadAndDelete(hashStr)
 	if deleted {
 		atomic.AddInt32(&self.count, -1)
@@ -78,12 +78,12 @@ func (self *MempoolTxs) deleteTx(hashStr string) bool {
 	return deleted
 }
 
-func (self *MempoolTxs) deleted(tx *mempoolTx, broadcastNotifications, includedInBlockchainNotification bool) {
+func (self *mempoolTxs) deleted(tx *mempoolTx, broadcastNotifications, includedInBlockchainNotification bool) {
 	if config.NODE_PROVIDE_EXTENDED_INFO_APP {
 
 		keys := tx.Tx.GetAllKeys()
 		for key := range keys {
-			foundMap, _ := self.accountsMapTxs.LoadOrStore(key, &MempoolAccountTxs{})
+			foundMap, _ := self.accountsMapTxs.LoadOrStore(key, &mempoolAccountTxs{})
 
 			foundMap.Lock()
 			delete(foundMap.txs, tx.Tx.Bloom.HashStr)
@@ -107,7 +107,7 @@ func (self *MempoolTxs) deleted(tx *mempoolTx, broadcastNotifications, includedI
 	}
 }
 
-func (self *MempoolTxs) GetTxsFromMap() (out map[string]*mempoolTx) {
+func (self *mempoolTxs) GetTxsFromMap() (out map[string]*mempoolTx) {
 
 	out = make(map[string]*mempoolTx)
 	self.txsMap.Range(func(key string, value *mempoolTx) bool {
@@ -118,7 +118,7 @@ func (self *MempoolTxs) GetTxsFromMap() (out map[string]*mempoolTx) {
 	return
 }
 
-func (self *MempoolTxs) GetTxsList() []*mempoolTx {
+func (self *mempoolTxs) GetTxsList() []*mempoolTx {
 	data := self.GetTxsFromMap()
 	out := make([]*mempoolTx, len(data))
 
@@ -130,7 +130,7 @@ func (self *MempoolTxs) GetTxsList() []*mempoolTx {
 	return out
 }
 
-func (self *MempoolTxs) GetTxsOnlyList() []*transaction.Transaction {
+func (self *mempoolTxs) GetTxsOnlyList() []*transaction.Transaction {
 	data := self.GetTxsFromMap()
 	out := make([]*transaction.Transaction, len(data))
 
@@ -142,13 +142,13 @@ func (self *MempoolTxs) GetTxsOnlyList() []*transaction.Transaction {
 	return out
 }
 
-func (self *MempoolTxs) Exists(txId string) bool {
+func (self *mempoolTxs) Exists(txId string) bool {
 	_, loaded := self.txsMap.Load(txId)
 	return loaded
 
 }
 
-func (self *MempoolTxs) Get(txId string) *mempoolTx {
+func (self *mempoolTxs) Get(txId string) *mempoolTx {
 	value, loaded := self.txsMap.Load(txId)
 	if !loaded {
 		return nil
@@ -156,7 +156,7 @@ func (self *MempoolTxs) Get(txId string) *mempoolTx {
 	return value
 }
 
-func (self *MempoolTxs) GetAccountTxs(publicKey []byte) []*mempoolTx {
+func (self *mempoolTxs) GetAccountTxs(publicKey []byte) []*mempoolTx {
 
 	if config.NODE_PROVIDE_EXTENDED_INFO_APP {
 		if foundMap, found := self.accountsMapTxs.Load(string(publicKey)); found {
@@ -179,12 +179,12 @@ func (self *MempoolTxs) GetAccountTxs(publicKey []byte) []*mempoolTx {
 	return nil
 }
 
-func createMempoolTxs() (txs *MempoolTxs) {
+func createMempoolTxs() (txs *mempoolTxs) {
 
-	txs = &MempoolTxs{
+	txs = &mempoolTxs{
 		0,
 		&generics.Map[string, *mempoolTx]{},
-		&generics.Map[string, *MempoolAccountTxs]{},
+		&generics.Map[string, *mempoolAccountTxs]{},
 		multicast.NewMulticastChannel[*blockchain_types.MempoolTransactionUpdate](),
 	}
 

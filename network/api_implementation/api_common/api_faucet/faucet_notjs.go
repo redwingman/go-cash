@@ -5,23 +5,17 @@ package api_faucet
 
 import (
 	"go.jolheiser.com/hcaptcha"
-	"pandora-pay/blockchain"
-	"pandora-pay/mempool"
 	"pandora-pay/network/network_config"
-	"pandora-pay/wallet"
 )
 
 type Faucet struct {
-	mempool        *mempool.Mempool
-	chain          *blockchain.Blockchain
-	wallet         *wallet.Wallet
 	hcpatchaClient *hcaptcha.Client
 }
 
-func NewFaucet(mempool *mempool.Mempool, chain *blockchain.Blockchain, wallet *wallet.Wallet) (*Faucet, error) {
+func NewFaucet() (*Faucet, error) {
 
 	api := &Faucet{
-		mempool, chain, wallet, nil,
+		nil,
 	}
 
 	if network_config.FAUCET_TESTNET_ENABLED {

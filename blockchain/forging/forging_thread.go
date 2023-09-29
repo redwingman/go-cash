@@ -17,8 +17,7 @@ import (
 	"time"
 )
 
-type ForgingThread struct {
-	mempool                   *mempool.Mempool
+type forgingThread struct {
 	threads                   int                                         //number of threads
 	solutionCn                chan<- *blockchain_types.BlockchainSolution //broadcasting that a solution thread was received
 	nextBlockCreatedCn        <-chan *forging_block_work.ForgingWork      //detect if a new work was published
@@ -29,30 +28,30 @@ type ForgingThread struct {
 	createForgingTransactions func(*block_complete.BlockComplete, []byte, uint64, []*transaction.Transaction) (*transaction.Transaction, error)
 }
 
-func (thread *ForgingThread) stopForging() {
-	thread.workersDestroyedCn <- struct{}{}
-	for i := 0; i < len(thread.workers); i++ {
-		close(thread.workers[i].workCn)
+func (self *forgingThread) stopForging() {
+	self.workersDestroyedCn <- struct{}{}
+	for i := 0; i < len(self.workers); i++ {
+		close(self.workers[i].workCn)
 	}
 }
 
-func (thread *ForgingThread) startForging() {
+func (self *forgingThread) startForging() {
 
-	thread.workers = make([]*ForgingWorkerThread, thread.threads)
+	self.workers = make([]*ForgingWorkerThread, self.threads)
 
 	forgingWorkerSolutionCn := make(chan *ForgingSolution)
-	for i := 0; i < len(thread.workers); i++ {
-		thread.workers[i] = createForgingWorkerThread(i, forgingWorkerSolutionCn)
-		recovery.SafeGo(thread.workers[i].forge)
+	for i := 0; i < len(self.workers); i++ {
+		self.workers[i] = createForgingWorkerThread(i, forgingWorkerSolutionCn)
+		recovery.SafeGo(self.workers[i].forge)
 	}
-	thread.workersCreatedCn <- thread.workers
+	self.workersCreatedCn <- self.workers
 
 	recovery.SafeGo(func() {
 		for {
 
 			s := ""
-			for i := 0; i < thread.threads; i++ {
-				hashesPerSecond := atomic.SwapUint32(&thread.workers[i].hashes, 0)
+			for i := 0; i < self.threads; i++ {
+				hashesPerSecond := atomic.SwapUint32(&self.workers[i].hashes, 0)
 				s += strconv.FormatUint(uint64(hashesPerSecond), 10) + " "
 			}
 			gui.GUI.InfoUpdate("Hashes/s", s)
@@ -71,16 +70,16 @@ func (thread *ForgingThread) startForging() {
 				return
 			}
 
-			lastPrevKernelHash := thread.lastPrevKernelHash.Load()
+			lastPrevKernelHash := self.lastPrevKernelHash.Load()
 			if lastPrevKernelHash != nil && solution.blkComplete.Height > 1 && !bytes.Equal(solution.blkComplete.PrevKernelHash, lastPrevKernelHash) {
 				continue
 			}
 
-			if newKernelHash, err = thread.publishSolution(solution); err != nil {
+			if newKernelHash, err = self.publishSolution(solution); err != nil {
 				gui.GUI.Error(fmt.Errorf("Error publishing solution: %d error: %s ", solution.blkComplete.Height, err))
 			} else {
 				gui.GUI.Info(fmt.Errorf("Block was forged! %d ", solution.blkComplete.Height))
-				thread.lastPrevKernelHash.Store(newKernelHash)
+				self.lastPrevKernelHash.Store(newKernelHash)
 			}
 
 		}
@@ -88,15 +87,15 @@ func (thread *ForgingThread) startForging() {
 
 	recovery.SafeGo(func() {
 		for {
-			newWork, ok := <-thread.nextBlockCreatedCn
+			newWork, ok := <-self.nextBlockCreatedCn
 			if !ok {
 				return
 			}
 
-			thread.lastPrevKernelHash.Store(newWork.BlkComplete.PrevKernelHash)
+			self.lastPrevKernelHash.Store(newWork.BlkComplete.PrevKernelHash)
 
-			for i := 0; i < thread.threads; i++ {
-				thread.workers[i].workCn <- newWork
+			for i := 0; i < self.threads; i++ {
+				self.workers[i].workCn <- newWork
 			}
 
 			gui.GUI.InfoUpdate("Hash Block", strconv.FormatUint(newWork.BlkHeight, 10))
@@ -105,7 +104,7 @@ func (thread *ForgingThread) startForging() {
 
 }
 
-func (thread *ForgingThread) publishSolution(solution *ForgingSolution) ([]byte, error) {
+func (self *forgingThread) publishSolution(solution *ForgingSolution) ([]byte, error) {
 
 	newBlk := block_complete.CreateEmptyBlockComplete()
 	if err := newBlk.Deserialize(advanced_buffers.NewBufferReader(solution.blkComplete.SerializeToBytes())); err != nil {
@@ -116,9 +115,9 @@ func (thread *ForgingThread) publishSolution(solution *ForgingSolution) ([]byte,
 	newBlk.Block.Timestamp = solution.timestamp
 	newBlk.Block.StakingAmount = solution.stakingAmount
 
-	txs, _ := thread.mempool.GetNextTransactionsToInclude(newBlk.Block.PrevHash)
+	txs, _ := mempool.Mempool.GetNextTransactionsToInclude(newBlk.Block.PrevHash)
 
-	txStakingReward, err := thread.createForgingTransactions(newBlk, solution.publicKey, solution.decryptedStakingBalance, txs)
+	txStakingReward, err := self.createForgingTransactions(newBlk, solution.publicKey, solution.decryptedStakingBalance, txs)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +133,7 @@ func (thread *ForgingThread) publishSolution(solution *ForgingSolution) ([]byte,
 
 	//send message to blockchain
 	result := make(chan *blockchain_types.BlockchainSolutionAnswer)
-	thread.solutionCn <- &blockchain_types.BlockchainSolution{
+	self.solutionCn <- &blockchain_types.BlockchainSolution{
 		newBlk,
 		result,
 	}
@@ -143,9 +142,8 @@ func (thread *ForgingThread) publishSolution(solution *ForgingSolution) ([]byte,
 	return res.ChainKernelHash, res.Err
 }
 
-func createForgingThread(threads int, createForgingTransactions func(*block_complete.BlockComplete, []byte, uint64, []*transaction.Transaction) (*transaction.Transaction, error), mempool *mempool.Mempool, solutionCn chan<- *blockchain_types.BlockchainSolution, nextBlockCreatedCn <-chan *forging_block_work.ForgingWork) *ForgingThread {
-	return &ForgingThread{
-		mempool,
+func createForgingThread(threads int, createForgingTransactions func(*block_complete.BlockComplete, []byte, uint64, []*transaction.Transaction) (*transaction.Transaction, error), solutionCn chan<- *blockchain_types.BlockchainSolution, nextBlockCreatedCn <-chan *forging_block_work.ForgingWork) *forgingThread {
+	return &forgingThread{
 		threads,
 		solutionCn,
 		nextBlockCreatedCn,
