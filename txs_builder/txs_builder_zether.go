@@ -207,7 +207,7 @@ func (builder *TxsBuilderType) createZetherRing(allAlreadyUsed map[string]bool, 
 		return
 	}
 
-	newRandomAccounts := func(ring *[]string, requireStakedAccounts, avoidStakedAccounts bool) (err error) {
+	newRandomAccounts := func(ringType bool, ring *[]string, requireStakedAccounts, avoidStakedAccounts bool) (err error) {
 
 		for len(*ring) < payload.RingSize/2 {
 
@@ -226,7 +226,7 @@ func (builder *TxsBuilderType) createZetherRing(allAlreadyUsed map[string]bool, 
 				if avoidStakedAccounts && reg.Staked {
 					continue
 				}
-				if (requireStakedAccounts && !reg.Staked) || (!requireStakedAccounts && len(reg.SpendPublicKey) > 0) {
+				if (requireStakedAccounts && !reg.Staked) || (!requireStakedAccounts && len(reg.SpendPublicKey) > 0 && !ringType) {
 					continue
 				}
 				alreadyUsed[string(addr.PublicKey)] = true
@@ -260,10 +260,10 @@ func (builder *TxsBuilderType) createZetherRing(allAlreadyUsed map[string]bool, 
 		return
 	}
 
-	if err = newRandomAccounts(senderRing, payload.RingConfiguration.SenderRingType.RequireStakedAccounts, payload.RingConfiguration.SenderRingType.AvoidStakedAccounts); err != nil {
+	if err = newRandomAccounts(true, senderRing, payload.RingConfiguration.SenderRingType.RequireStakedAccounts, payload.RingConfiguration.SenderRingType.AvoidStakedAccounts); err != nil {
 		return
 	}
-	if err = newRandomAccounts(recipientRing, payload.RingConfiguration.RecipientRingType.RequireStakedAccounts, payload.RingConfiguration.RecipientRingType.AvoidStakedAccounts); err != nil {
+	if err = newRandomAccounts(false, recipientRing, payload.RingConfiguration.RecipientRingType.RequireStakedAccounts, payload.RingConfiguration.RecipientRingType.AvoidStakedAccounts); err != nil {
 		return
 	}
 
