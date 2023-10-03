@@ -17,13 +17,15 @@ func (this *BannedNodesType) IsBanned(urlStr string) bool {
 	return false
 }
 
-func (this *BannedNodesType) Ban(url *url.URL, urlStr, message string, duration time.Duration) {
-	if urlStr == "" {
-		urlStr = url.String()
-	}
+func (this *BannedNodesType) BanURL(url *url.URL, message string, duration time.Duration) {
+	this.Ban(url.String(), message, duration)
+}
+
+func (this *BannedNodesType) Ban(urlStr, message string, duration time.Duration) {
+
 	time := time.Now()
 	this.bannedMap.Store(urlStr, &BannedNode{
-		URL:        url,
+		URL:        urlStr,
 		Message:    message,
 		Timestamp:  time,
 		Expiration: time.Add(duration),

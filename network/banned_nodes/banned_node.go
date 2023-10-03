@@ -1,12 +1,11 @@
 package banned_nodes
 
 import (
-	"net/url"
 	"time"
 )
 
 type BannedNode struct {
-	URL        *url.URL
+	URL        string
 	Timestamp  time.Time
 	Expiration time.Time
 	Message    string

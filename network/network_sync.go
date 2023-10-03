@@ -64,7 +64,7 @@ func (this *networkType) continuouslyConnectingNewPeers() {
 					//gui.GUI.Log("connecting to", knownNode.URL, atomic.LoadInt32(&knownNode.Score))
 
 					if banned_nodes.BannedNodes.IsBanned(knownNode.URL) {
-						known_nodes.KnownNodes.DecreaseKnownNodeScore(knownNode, -10, false)
+						known_nodes.KnownNodes.RemoveKnownNode(knownNode)
 					} else {
 						_, err := websocks.Websockets.NewWebsocketClient(knownNode)
 						if err != nil {
@@ -72,7 +72,7 @@ func (this *networkType) continuouslyConnectingNewPeers() {
 							//gui.GUI.Error("error connecting", knownNode.URL, err)
 
 							if err.Error() != "Already connected" {
-								known_nodes.KnownNodes.DecreaseKnownNodeScore(knownNode, -20, false)
+								known_nodes.KnownNodes.DecreaseKnownNodeScore(knownNode, -2, false)
 							}
 
 						} else {

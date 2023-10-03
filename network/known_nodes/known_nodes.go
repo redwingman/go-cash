@@ -11,6 +11,7 @@ import (
 	"pandora-pay/store/min_max_heap"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type KnownNodesType struct {
@@ -73,6 +74,7 @@ func (this *KnownNodesType) DecreaseKnownNodeScore(knownNode *known_node.KnownNo
 	update, removed, score := knownNode.DecreaseScore(delta, isServer)
 	if removed {
 		this.RemoveKnownNode(knownNode)
+		banned_nodes.BannedNodes.Ban(knownNode.URL, "offline", time.Hour)
 	}
 	if update || removed {
 		this.knownNotConnectedMaxHeapMutex.Lock()

@@ -75,7 +75,7 @@ func NewTcpServer() error {
 		}
 	}
 
-	banned_nodes.BannedNodes.Ban(&url.URL{Scheme: "ws", Host: address + ":" + port, Path: "/ws"}, "", "You can't connect to yourself", 10*365*24*time.Hour)
+	banned_nodes.BannedNodes.BanURL(&url.URL{Scheme: "ws", Host: address + ":" + port, Path: "/ws"}, "You can't connect to yourself", 10*365*24*time.Hour)
 
 	var certPath, keyPath string
 	if arguments.Arguments["--tcp-server-tls-cert-file"] != nil {
@@ -148,7 +148,7 @@ func NewTcpServer() error {
 		network_config.NETWORK_ADDRESS_URL_STRING = u.String()
 		network_config.NETWORK_WEBSOCKET_ADDRESS_URL_STRING = websocketUrl.String()
 
-		banned_nodes.BannedNodes.Ban(websocketUrl, "", "You can't connect to yourself", 10*365*24*time.Hour)
+		banned_nodes.BannedNodes.BanURL(websocketUrl, "You can't connect to yourself", 10*365*24*time.Hour)
 		TcpServer.URL = u
 		TcpServer.Address = u.Host
 	}
