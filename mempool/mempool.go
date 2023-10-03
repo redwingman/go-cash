@@ -16,6 +16,7 @@ import (
 	"pandora-pay/network/websocks/connection/advanced_connection_types"
 	"pandora-pay/txs_validator"
 	"runtime"
+	"sync/atomic"
 	"time"
 )
 
@@ -37,6 +38,7 @@ type mempool struct {
 	insertTransactionsCn      chan *mempoolWorkerInsertTxs
 	Txs                       *mempoolTxs
 	OnBroadcastNewTransaction func([]*transaction.Transaction, bool, bool, advanced_connection_types.UUID, context.Context) []error
+	workers                   []*mempoolWorker
 }
 
 var Mempool *mempool
@@ -235,6 +237,15 @@ func (self *mempool) ContinueWork() {
 	self.newWorkCn <- newWork
 }
 
+func (self *mempool) Close() {
+
+	for _, worker := range self.workers {
+		worker.closed.Store(true)
+	}
+
+	close(self.SuspendProcessingCn)
+}
+
 func Initialize() (err error) {
 
 	gui.GUI.Log("Mempool init...")
@@ -249,9 +260,16 @@ func Initialize() (err error) {
 		make(chan *mempoolWorkerInsertTxs),
 		createMempoolTxs(),
 		nil,
+		[]*mempoolWorker{},
 	}
 
-	worker := new(mempoolWorker)
+	worker := &mempoolWorker{
+		nil,
+		&atomic.Bool{},
+	}
+	worker.closed.Store(false)
+	Mempool.workers = append(Mempool.workers, worker)
+
 	recovery.SafeGo(func() {
 		worker.processing(Mempool.newWorkCn, Mempool.SuspendProcessingCn, Mempool.ContinueProcessingCn, Mempool.addTransactionCn, Mempool.insertTransactionsCn, Mempool.removeTransactionsCn, Mempool.Txs)
 	})

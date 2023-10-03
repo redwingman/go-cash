@@ -28,7 +28,7 @@ function downloadHashes(height = 0){
 		    content.push(json)
 		    downloadHashes(height+1)
 	    }catch(err){
-	    	fs.writeFileSync(args[1], content.join("\n") )
+			fs.writeFileSync(args[1], content.join(config.LineBreak) )
 	    }	   
 	  });
 

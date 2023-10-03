@@ -17,7 +17,8 @@ type mempoolWork struct {
 }
 
 type mempoolWorker struct {
-	dbTx store_db_interface.StoreDBTransactionInterface
+	dbTx   store_db_interface.StoreDBTransactionInterface
+	closed *atomic.Bool
 }
 
 type mempoolWorkerAddTx struct {
@@ -135,7 +136,7 @@ func (self *mempoolWorker) processing(
 	}
 
 	suspended := false
-	for {
+	for !self.closed.Load() {
 
 		select {
 		case <-suspendProcessingCn:
