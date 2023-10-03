@@ -56,7 +56,7 @@ func (self *wallet) GetFirstStakedAddress(lock bool) (*wallet_address.WalletAddr
 		return found, nil
 	}
 
-	return self.AddNewAddress(true, "", true, true, true)
+	return self.AddNewAddress(true, "", true, false, true)
 }
 
 func (self *wallet) GetFirstAddressForDevnetGenesisAirdrop() (string, *shared_staked.WalletAddressSharedStakedAddressExported, error) {
