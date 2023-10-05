@@ -1,8 +1,6 @@
 package blockchain
 
 import (
-	"encoding/base64"
-	"fmt"
 	"pandora-pay/blockchain/blockchain_sync"
 	"pandora-pay/blockchain/blockchain_types"
 	"pandora-pay/blockchain/blocks/block_complete"
@@ -70,10 +68,6 @@ func (self *blockchainUpdatesQueue) lastSuccess(updates []*blockchainUpdate) *Bl
 
 func (self *blockchainUpdatesQueue) executeUpdate(update *blockchainUpdate) (err error) {
 
-	gui.GUI.Warning("-------------------------------------------")
-	gui.GUI.Warning(fmt.Sprintf("Included blocks %v - %d | TXs: %d | Hash %s", update.calledByForging, len(update.insertedBlocks), len(update.insertedTxs), base64.StdEncoding.EncodeToString(update.newChainData.Hash)))
-	gui.GUI.Warning(update.newChainData.Height, base64.StdEncoding.EncodeToString(update.newChainData.Hash), update.newChainData.Target.Text(10), update.newChainData.BigTotalDifficulty.Text(10))
-	gui.GUI.Warning("-------------------------------------------")
 	update.newChainData.updateChainInfo()
 
 	self.chain.UpdateNewChainUpdate.Broadcast(&blockchain_types.BlockchainUpdates{

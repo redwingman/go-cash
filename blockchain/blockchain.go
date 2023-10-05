@@ -22,7 +22,6 @@ import (
 	"pandora-pay/config/config_coins"
 	"pandora-pay/config/config_stake"
 	"pandora-pay/gui"
-	"pandora-pay/helpers"
 	"pandora-pay/helpers/generics"
 	"pandora-pay/helpers/multicast"
 	"pandora-pay/mempool"
@@ -91,23 +90,6 @@ func (self *blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplete
 
 	gui.GUI.Info("Including blocks " + strconv.FormatUint(blocksComplete[0].Height, 10) + " ... " + strconv.FormatUint(blocksComplete[len(blocksComplete)-1].Height, 10))
 
-	//chain.RLock() is not required because it is guaranteed that no other thread is writing now in the chain
-	var newChainData = &BlockchainData{
-		helpers.CloneBytes(chainData.Hash),             //atomic copy
-		helpers.CloneBytes(chainData.PrevHash),         //atomic copy
-		helpers.CloneBytes(chainData.KernelHash),       //atomic copy
-		helpers.CloneBytes(chainData.PrevKernelHash),   //atomic copy
-		chainData.Height,                               //atomic copy
-		chainData.Timestamp,                            //atomic copy
-		new(big.Int).Set(chainData.Target),             //atomic copy
-		new(big.Int).Set(chainData.BigTotalDifficulty), //atomic copy
-		chainData.TransactionsCount,                    //atomic copy
-		chainData.AccountsCount,                        //atomic copy
-		chainData.AssetsCount,                          //atomic copy
-		chainData.Supply,
-		chainData.ConsecutiveSelfForged, //atomic copy
-	}
-
 	allTransactionsChanges := []*blockchain_types.BlockchainTransactionUpdate{}
 
 	insertedBlocks := []*block_complete.BlockComplete{}
@@ -123,12 +105,16 @@ func (self *blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplete
 	removedBlocksTransactionsCount := uint64(0)
 
 	var dataStorage *data_storage.DataStorage
+	var newChainData *BlockchainData
 
 	err = func() (err error) {
 
 		mempool.Mempool.SuspendProcessingCn <- struct{}{}
 
 		err = store.StoreBlockchain.DB.Update(func(writer store_db_interface.StoreDBTransactionInterface) (err error) {
+
+			chainData = self.GetChainData()
+			newChainData = chainData.clone()
 
 			defer func() {
 				if errReturned := recover(); errReturned != nil {
@@ -183,12 +169,13 @@ func (self *blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplete
 					}
 				}
 
+				removedBlocksTransactionsCount = newChainData.TransactionsCount
+
 				if firstBlockComplete.Block.Height == 0 {
 					gui.GUI.Info("chain.createGenesisBlockchainData called")
 					newChainData = self.createGenesisBlockchainData()
 					removedBlocksTransactionsCount = 0
 				} else {
-					removedBlocksTransactionsCount = newChainData.TransactionsCount
 					newChainData = &BlockchainData{}
 					if err = newChainData.loadBlockchainInfo(writer, firstBlockComplete.Block.Height); err != nil {
 						return
@@ -388,7 +375,7 @@ func (self *blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplete
 				}
 
 				if err = newChainData.saveBlockchain(writer); err != nil {
-					panic("Error saving Blockchain " + err.Error())
+					return errors.New("Error saving Blockchain " + err.Error())
 				}
 
 				if len(removedBlocksHeights) > 0 {
@@ -396,7 +383,7 @@ func (self *blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplete
 					//remove unused blocks
 					for _, removedBlock := range removedBlocksHeights {
 						if err = self.deleteUnusedBlocksComplete(writer, removedBlock, dataStorage); err != nil {
-							panic(err)
+							return
 						}
 					}
 
@@ -439,7 +426,7 @@ func (self *blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplete
 				}
 
 				if err = self.saveBlockchainHashmaps(dataStorage); err != nil {
-					panic(err)
+					return
 				}
 
 				newChainData.AssetsCount = dataStorage.Asts.Count
@@ -463,7 +450,7 @@ func (self *blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplete
 		err = errors.New("No blocks were inserted")
 	}
 
-	if err == nil {
+	if err == nil && newChainData != nil {
 		kernelHash = newChainData.KernelHash
 		self.ChainData.Store(newChainData)
 		mempool.Mempool.ContinueProcessingCn <- mempool.CONTINUE_PROCESSING_NO_ERROR
@@ -477,7 +464,7 @@ func (self *blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplete
 		exceptSocketUUID: exceptSocketUUID,
 	}
 
-	if err == nil {
+	if err == nil && newChainData != nil {
 		update.newChainData = newChainData
 		update.dataStorage = dataStorage
 		update.removedTxsList = removedTxsList
@@ -487,6 +474,11 @@ func (self *blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplete
 		update.insertedBlocks = insertedBlocks
 		update.allTransactionsChanges = allTransactionsChanges
 	}
+
+	gui.GUI.Warning("-------------------------------------------")
+	gui.GUI.Warning(fmt.Sprintf("Included blocks %v - %d | TXs: %d | Hash %s", update.calledByForging, len(update.insertedBlocks), len(update.insertedTxs), base64.StdEncoding.EncodeToString(update.newChainData.Hash)))
+	gui.GUI.Warning(update.newChainData.Height, base64.StdEncoding.EncodeToString(update.newChainData.Hash), update.newChainData.Target.Text(10), update.newChainData.BigTotalDifficulty.Text(10))
+	gui.GUI.Warning("-------------------------------------------")
 
 	self.updatesQueue.updatesCn <- update
 
@@ -542,6 +534,7 @@ func Initialize() error {
 	Blockchain.updatesQueue.processBlockchainUpdatesQueue()
 	Blockchain.updatesQueue.processBlockchainUpdateMempool()
 	Blockchain.updatesQueue.processBlockchainUpdateNotifications()
+	Blockchain.initBlockchainCLI()
 
 	return nil
 }

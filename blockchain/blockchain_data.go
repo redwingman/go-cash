@@ -7,6 +7,7 @@ import (
 	"pandora-pay/blockchain/blocks/block/difficulty"
 	"pandora-pay/config"
 	"pandora-pay/gui"
+	"pandora-pay/helpers"
 	"pandora-pay/store/store_db/store_db_interface"
 	"strconv"
 )
@@ -27,21 +28,21 @@ type BlockchainData struct {
 	ConsecutiveSelfForged uint64   `json:"consecutiveSelfForged" msgpack:"consecutiveSelfForged"`
 }
 
-func (chainData *BlockchainData) computeNextTargetBig(reader store_db_interface.StoreDBTransactionInterface) (*big.Int, error) {
+func (self *BlockchainData) computeNextTargetBig(reader store_db_interface.StoreDBTransactionInterface) (*big.Int, error) {
 
-	if config.DIFFICULTY_BLOCK_WINDOW > chainData.Height {
-		return chainData.Target, nil
+	if config.DIFFICULTY_BLOCK_WINDOW > self.Height {
+		return self.Target, nil
 	}
 
-	first := chainData.Height - config.DIFFICULTY_BLOCK_WINDOW
+	first := self.Height - config.DIFFICULTY_BLOCK_WINDOW
 
-	firstDifficulty, firstTimestamp, err := chainData.LoadTotalDifficultyExtra(reader, first+1)
+	firstDifficulty, firstTimestamp, err := self.LoadTotalDifficultyExtra(reader, first+1)
 	if err != nil {
 		return nil, err
 	}
 
-	lastDifficulty := chainData.BigTotalDifficulty
-	lastTimestamp := chainData.Timestamp
+	lastDifficulty := self.BigTotalDifficulty
+	lastTimestamp := self.Timestamp
 
 	deltaTotalDifficulty := new(big.Int).Sub(lastDifficulty, firstDifficulty)
 	deltaTime := lastTimestamp - firstTimestamp
@@ -54,9 +55,27 @@ func (chainData *BlockchainData) computeNextTargetBig(reader store_db_interface.
 	return difficulty.NextTargetBig(deltaTotalDifficulty, deltaTime)
 }
 
-func (chainData *BlockchainData) updateChainInfo() {
-	gui.GUI.Info2Update("Blocks", strconv.FormatUint(chainData.Height, 10))
-	gui.GUI.Info2Update("Chain  Hash", base64.StdEncoding.EncodeToString(chainData.Hash))
-	gui.GUI.Info2Update("Chain KHash", base64.StdEncoding.EncodeToString(chainData.KernelHash))
-	gui.GUI.Info2Update("TXs", strconv.FormatUint(chainData.TransactionsCount, 10))
+func (self *BlockchainData) updateChainInfo() {
+	gui.GUI.Info2Update("Blocks", strconv.FormatUint(self.Height, 10))
+	gui.GUI.Info2Update("Chain  Hash", base64.StdEncoding.EncodeToString(self.Hash))
+	gui.GUI.Info2Update("Chain KHash", base64.StdEncoding.EncodeToString(self.KernelHash))
+	gui.GUI.Info2Update("TXs", strconv.FormatUint(self.TransactionsCount, 10))
+}
+
+func (self *BlockchainData) clone() *BlockchainData {
+	return &BlockchainData{
+		helpers.CloneBytes(self.Hash),             //atomic copy
+		helpers.CloneBytes(self.PrevHash),         //atomic copy
+		helpers.CloneBytes(self.KernelHash),       //atomic copy
+		helpers.CloneBytes(self.PrevKernelHash),   //atomic copy
+		self.Height,                               //atomic copy
+		self.Timestamp,                            //atomic copy
+		new(big.Int).Set(self.Target),             //atomic copy
+		new(big.Int).Set(self.BigTotalDifficulty), //atomic copy
+		self.TransactionsCount,                    //atomic copy
+		self.AccountsCount,                        //atomic copy
+		self.AssetsCount,                          //atomic copy
+		self.Supply,
+		self.ConsecutiveSelfForged, //atomic copy
+	}
 }
