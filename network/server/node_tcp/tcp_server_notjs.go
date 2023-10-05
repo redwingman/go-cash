@@ -133,7 +133,7 @@ func NewTcpServer() error {
 		} else {
 			u = &url.URL{Scheme: "http", Host: address + ":" + port, Path: ""}
 			if tlsConfig != nil {
-				u.Host += "s"
+				u.Scheme += "s"
 			}
 		}
 

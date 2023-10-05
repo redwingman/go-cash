@@ -3,6 +3,7 @@ package known_nodes
 import (
 	"errors"
 	"math/rand"
+	"net/url"
 	"pandora-pay/helpers/generics"
 	"pandora-pay/network/banned_nodes"
 	"pandora-pay/network/connected_nodes"
@@ -99,29 +100,34 @@ func (this *KnownNodesType) MarkKnownNodeDisconnected(knownNode *known_node.Know
 	this.knownNotConnectedMaxHeap.Update(float64(atomic.LoadInt32(&knownNode.Score)), []byte(knownNode.URL))
 }
 
-func (this *KnownNodesType) AddKnownNode(url string, isSeed bool) (*known_node.KnownNodeScored, error) {
+func (this *KnownNodesType) AddKnownNode(newUrl string, isSeed bool) (*known_node.KnownNodeScored, error) {
 
-	if url == "" {
+	if newUrl == "" {
 		return nil, errors.New("url is empty")
+	}
+
+	_, err := url.Parse(newUrl) // some not-exist-proxy
+	if err != nil {
+		return nil, err
 	}
 
 	if atomic.LoadInt32(&this.knownCount) > network_config.NETWORK_KNOWN_NODES_LIMIT {
 		return nil, errors.New("Too many nodes already in the list")
 	}
 
-	if banned_nodes.BannedNodes.IsBanned(url) {
+	if banned_nodes.BannedNodes.IsBanned(newUrl) {
 		return nil, errors.New("url is banned")
 	}
 
 	knownNode := &known_node.KnownNodeScored{
 		KnownNode: known_node.KnownNode{
-			URL:    url,
+			URL:    newUrl,
 			IsSeed: isSeed,
 		},
 		Score: 0,
 	}
 
-	if _, exists := this.knownMap.LoadOrStore(url, knownNode); exists {
+	if _, exists := this.knownMap.LoadOrStore(newUrl, knownNode); exists {
 		return nil, errors.New("Already exists")
 	}
 
@@ -131,9 +137,9 @@ func (this *KnownNodesType) AddKnownNode(url string, isSeed bool) (*known_node.K
 
 	atomic.AddInt32(&this.knownCount, +1)
 
-	if _, ok := connected_nodes.ConnectedNodes.AllAddresses.Load(url); !ok {
+	if _, ok := connected_nodes.ConnectedNodes.AllAddresses.Load(newUrl); !ok {
 		this.knownNotConnectedMaxHeapMutex.Lock()
-		this.knownNotConnectedMaxHeap.Update(0, []byte(url))
+		this.knownNotConnectedMaxHeap.Update(0, []byte(newUrl))
 		this.knownNotConnectedMaxHeapMutex.Unlock()
 	}
 

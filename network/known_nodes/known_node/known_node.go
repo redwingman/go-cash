@@ -14,19 +14,21 @@ type KnownNodeScored struct {
 	Score int32 //use atomic
 }
 
-var KNOWN_KNODE_SCORE_MINIMUM = int32(-1000)
+var KNOWN_KNODE_SCORE_MINIMUM = int32(-10000)
+var KNOWN_KNODE_SCORE_SERVER_MAXIMUM = int32(1000)
+var KNOWN_KNODE_SCORE_CLIENT_MAXIMUM = int32(100)
 
 func (self *KnownNodeScored) IncreaseScore(delta int32, isServer bool) (bool, int32) {
 
 	newScore := atomic.AddInt32(&self.Score, delta)
 
-	if newScore > 100 && !isServer {
-		atomic.StoreInt32(&self.Score, 100)
-		return false, 100
+	if newScore > KNOWN_KNODE_SCORE_CLIENT_MAXIMUM && !isServer {
+		atomic.StoreInt32(&self.Score, KNOWN_KNODE_SCORE_CLIENT_MAXIMUM)
+		return false, KNOWN_KNODE_SCORE_CLIENT_MAXIMUM
 	}
-	if newScore > 300 && isServer {
-		atomic.StoreInt32(&self.Score, 300)
-		return false, 100
+	if newScore > KNOWN_KNODE_SCORE_SERVER_MAXIMUM && isServer {
+		atomic.StoreInt32(&self.Score, KNOWN_KNODE_SCORE_SERVER_MAXIMUM)
+		return false, KNOWN_KNODE_SCORE_SERVER_MAXIMUM
 	}
 
 	return true, newScore
