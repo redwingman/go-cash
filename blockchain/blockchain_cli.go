@@ -95,10 +95,10 @@ func (self *blockchain) CliNewBlockchainTop(cmd string, ctx context.Context) (er
 		}
 
 		if err = self.saveBlockchainHashmaps(dataStorage); err != nil {
-			panic(err)
+			return
 		}
 
-		return nil
+		return
 	})
 
 	if err == nil && newChainData != nil {
