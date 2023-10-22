@@ -58,6 +58,7 @@ var commands = []Command{
 	{Name: "Wallet:TX", Text: "Public Update Asset Fee Liquidity"},
 	{Name: "Wallet:TX", Text: "Public Resolution Conditional Payment"},
 	{Name: "Wallet", Text: "Export Addresses"},
+	{Name: "Wallet", Text: "Export Balances JSON"},
 	{Name: "Wallet", Text: "Export Address JSON"},
 	{Name: "Wallet", Text: "Import Address JSON"},
 	{Name: "Wallet", Text: "Export Wallet JSON"},

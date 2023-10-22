@@ -31,6 +31,21 @@ import (
 	"strconv"
 )
 
+type addressAsset struct {
+	balance *crypto.ElGamal
+	assetId []byte
+	ast     *asset.Asset
+}
+type address struct {
+	registration            *registration.Registration
+	plainAcc                *plain_account.PlainAccount
+	assetsList              []*addressAsset
+	publicKey               []byte
+	name                    string
+	addressString           string
+	addressRegisteredString string
+}
+
 func (self *wallet) exportSharedStakedAddress(addr *wallet_address.WalletAddress, path string, print bool) (*shared_staked.WalletAddressSharedStakedAddressExported, error) {
 
 	if !addr.Staked {
@@ -61,72 +76,7 @@ func (self *wallet) exportSharedStakedAddress(addr *wallet_address.WalletAddress
 	return sharedStakedAddress, nil
 }
 
-func (self *wallet) CliScanAddresses(cmd string, ctx context.Context) (err error) {
-
-	self.Lock.Lock()
-	defer self.Lock.Unlock()
-
-	if err = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
-
-		dataStorage := data_storage.NewDataStorage(reader)
-
-		for {
-
-			var addr *addresses.Address
-			if addr, err = self.GenerateNextAddress(false); err != nil {
-				return
-			}
-
-			var reg *registration.Registration
-			if reg, err = dataStorage.Regs.Get(string(addr.PublicKey)); err != nil {
-				return
-			}
-
-			if reg != nil {
-				if _, err = self.AddNewAddress(false, "", reg.Staked, reg.SpendPublicKey != nil, true); err != nil {
-					return
-				}
-				continue
-			}
-
-			var plainAcc *plain_account.PlainAccount
-			if plainAcc, err = dataStorage.PlainAccs.Get(string(addr.PublicKey)); err != nil {
-				return
-			}
-
-			if plainAcc != nil {
-				if _, err = self.AddNewAddress(false, "", false, false, true); err != nil {
-					return
-				}
-				continue
-			}
-
-			return
-		}
-
-	}); err != nil {
-		return
-	}
-
-	return
-}
-
-func (self *wallet) CliListAddresses(cmd string, ctx context.Context) (err error) {
-
-	type AddressAsset struct {
-		balance *crypto.ElGamal
-		assetId []byte
-		ast     *asset.Asset
-	}
-	type Address struct {
-		registration            *registration.Registration
-		plainAcc                *plain_account.PlainAccount
-		assetsList              []*AddressAsset
-		publicKey               []byte
-		name                    string
-		addressString           string
-		addressRegisteredString string
-	}
+func (self *wallet) cliGetAddresses() (addresses []*address, err error) {
 
 	self.Lock.RLock()
 	gui.GUI.OutputWrite("Wallet")
@@ -136,14 +86,14 @@ func (self *wallet) CliListAddresses(cmd string, ctx context.Context) (err error
 	gui.GUI.OutputWrite("Count: " + strconv.Itoa(self.Count))
 	gui.GUI.OutputWrite("")
 
-	addresses := make([]*Address, len(self.Addresses))
+	addresses = make([]*address, len(self.Addresses))
 
 	for i, walletAddress := range self.Addresses {
-		addresses[i] = &Address{publicKey: helpers.CloneBytes(walletAddress.PublicKey), name: walletAddress.Name, addressString: walletAddress.GetAddress(false), addressRegisteredString: walletAddress.GetAddress(true)}
+		addresses[i] = &address{publicKey: helpers.CloneBytes(walletAddress.PublicKey), name: walletAddress.Name, addressString: walletAddress.GetAddress(false), addressRegisteredString: walletAddress.GetAddress(true)}
 	}
 	self.Lock.RUnlock()
 
-	if err = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
+	err = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
 
 		dataStorage := data_storage.NewDataStorage(reader)
 
@@ -181,7 +131,7 @@ func (self *wallet) CliListAddresses(cmd string, ctx context.Context) (err error
 						return
 					}
 
-					addresses[i].assetsList = append(addresses[i].assetsList, &AddressAsset{
+					addresses[i].assetsList = append(addresses[i].assetsList, &addressAsset{
 						acc.Balance.Amount,
 						assetId,
 						ast,
@@ -194,7 +144,15 @@ func (self *wallet) CliListAddresses(cmd string, ctx context.Context) (err error
 		}
 
 		return
-	}); err != nil {
+	})
+
+	return
+}
+
+func (self *wallet) cliListAddresses(cmd string, ctx context.Context) (err error) {
+
+	addresses, err := self.cliGetAddresses()
+	if err != nil {
 		return
 	}
 
@@ -265,7 +223,7 @@ func (self *wallet) CliListAddresses(cmd string, ctx context.Context) (err error
 
 func (self *wallet) CliSelectAddress(text string, ctx context.Context) (*wallet_address.WalletAddress, string, int, error) {
 
-	if err := self.CliListAddresses("", ctx); err != nil {
+	if err := self.cliListAddresses("", ctx); err != nil {
 		return nil, "", 0, err
 	}
 
@@ -318,9 +276,126 @@ func (self *wallet) initWalletCLI() {
 		return
 	}
 
+	cliScanAddresses := func(cmd string, ctx context.Context) (err error) {
+
+		self.Lock.Lock()
+		defer self.Lock.Unlock()
+
+		if err = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
+
+			dataStorage := data_storage.NewDataStorage(reader)
+
+			for {
+
+				var addr *addresses.Address
+				if addr, err = self.GenerateNextAddress(false); err != nil {
+					return
+				}
+
+				var reg *registration.Registration
+				if reg, err = dataStorage.Regs.Get(string(addr.PublicKey)); err != nil {
+					return
+				}
+
+				if reg != nil {
+					if _, err = self.AddNewAddress(false, "", reg.Staked, reg.SpendPublicKey != nil, true); err != nil {
+						return
+					}
+					continue
+				}
+
+				var plainAcc *plain_account.PlainAccount
+				if plainAcc, err = dataStorage.PlainAccs.Get(string(addr.PublicKey)); err != nil {
+					return
+				}
+
+				if plainAcc != nil {
+					if _, err = self.AddNewAddress(false, "", false, false, true); err != nil {
+						return
+					}
+					continue
+				}
+
+				return
+			}
+
+		}); err != nil {
+			return
+		}
+
+		return
+	}
+
+	cliExportWalletBalancesJSON := func(cmd string, ctx context.Context) (err error) {
+
+		filename := gui.GUI.OutputReadFilename("Path to export", "txt", false)
+
+		addresses, err := self.cliGetAddresses()
+		if err != nil {
+			return
+		}
+
+		type exportAddressAsset struct {
+			Balance uint64 `json:"balance"`
+			Asset   []byte `json:"asset"`
+		}
+		type exportAddress struct {
+			Name              string `json:"name"`
+			Address           string `json:"address"`
+			AddressRegistered string `json:"addressRegistered"`
+			Assets            []*exportAddressAsset
+			Registration      *registration.Registration
+			PlainAcc          *plain_account.PlainAccount
+		}
+
+		exportedAddresses := make([]*exportAddress, len(addresses))
+
+		var decrypted uint64
+		for i, address := range addresses {
+
+			exportedAddresses[i] = &exportAddress{
+				address.name,
+				address.addressString,
+				address.addressRegisteredString,
+				make([]*exportAddressAsset, len(address.assetsList)),
+				address.registration,
+				address.plainAcc,
+			}
+
+			for j, data := range addresses[i].assetsList {
+
+				gui.GUI.Info2Update("Decrypting", "")
+
+				if decrypted, err = self.DecryptBalanceByPublicKey(address.publicKey, data.balance.Serialize(), data.assetId, false, 0, true, true, ctx, func(status string) {
+					gui.GUI.Info2Update("Decrypted", status)
+				}); err != nil {
+					return
+				}
+
+				exportedAddresses[i].Assets[j] = &exportAddressAsset{
+					decrypted,
+					data.assetId,
+				}
+			}
+
+		}
+
+		lines, err := json.Marshal(exportedAddresses)
+		if err != nil {
+			return err
+		}
+
+		if err := files.WriteFile(filename, string(lines)); err != nil {
+			return err
+		}
+
+		gui.GUI.OutputWrite("Exported successfully to: ", filename)
+		return
+	}
+
 	cliExportAddressJSON := func(cmd string, ctx context.Context) (err error) {
 
-		if err = self.CliListAddresses("", ctx); err != nil {
+		if err = self.cliListAddresses("", ctx); err != nil {
 			return
 		}
 
@@ -424,7 +499,7 @@ func (self *wallet) initWalletCLI() {
 		if _, err = self.AddNewAddress(true, filename, staked, spendRequired, true); err != nil {
 			return
 		}
-		return self.CliListAddresses(cmd, ctx)
+		return self.cliListAddresses(cmd, ctx)
 	}
 
 	cliRemoveAddress := func(cmd string, ctx context.Context) (err error) {
@@ -438,7 +513,7 @@ func (self *wallet) initWalletCLI() {
 		if success, err = self.RemoveAddressByIndex(index, true); err != nil {
 			return
 		}
-		if err = self.CliListAddresses("", ctx); err != nil {
+		if err = self.cliListAddresses("", ctx); err != nil {
 			return
 		}
 
@@ -710,8 +785,8 @@ func (self *wallet) initWalletCLI() {
 		return
 	}
 
-	gui.GUI.CommandDefineCallback("List Addresses", self.CliListAddresses, self.Loaded)
-	gui.GUI.CommandDefineCallback("Scan Addresses", self.CliScanAddresses, self.Loaded)
+	gui.GUI.CommandDefineCallback("List Addresses", self.cliListAddresses, self.Loaded)
+	gui.GUI.CommandDefineCallback("Scan Addresses", cliScanAddresses, self.Loaded)
 	gui.GUI.CommandDefineCallback("Create New Address", cliCreateNewAddress, self.Loaded)
 	gui.GUI.CommandDefineCallback("Clear & Create new empty Wallet", cliClearWallet, self.Loaded)
 	gui.GUI.CommandDefineCallback("Show Mnemnonic", cliShowMnemonic, self.Loaded)
@@ -723,6 +798,7 @@ func (self *wallet) initWalletCLI() {
 	gui.GUI.CommandDefineCallback("Remove Address", cliRemoveAddress, self.Loaded)
 	gui.GUI.CommandDefineCallback("Export Staked Staked Address", cliExportSharedStakedAddress, self.Loaded)
 	gui.GUI.CommandDefineCallback("Export Addresses", cliExportAddresses, self.Loaded)
+	gui.GUI.CommandDefineCallback("Export Balances JSON", cliExportWalletBalancesJSON, self.Loaded)
 	gui.GUI.CommandDefineCallback("Export Address JSON", cliExportAddressJSON, self.Loaded)
 	gui.GUI.CommandDefineCallback("Import Address JSON", cliImportAddressJSON, self.Loaded)
 	gui.GUI.CommandDefineCallback("Export Wallet JSON", cliExportWalletJSON, self.Loaded)
