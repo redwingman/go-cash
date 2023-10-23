@@ -68,6 +68,7 @@ var commands = []Command{
 	{Name: "Wallet", Text: "Remove Encryption"},
 	{Name: "Utils", Text: "Create (PublicKey, PrivateKey) pair"},
 	{Name: "Utils", Text: "Sign message using PrivateKey"},
+	{Name: "Utils", Text: "Verify signed message using PublicKey"},
 	{Name: "Utils", Text: "Sign Resolution Conditional Payment"},
 	{Name: "Blockchain", Text: "New Blockchain Top"},
 	{Name: "Mempool", Text: "Show Txs"},

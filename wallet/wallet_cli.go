@@ -742,6 +742,35 @@ func (self *wallet) initWalletCLI() {
 		return
 	}
 
+	cliVerifySignedMessage := func(cmd string, ctx context.Context) (err error) {
+
+		publicKey := gui.GUI.OutputReadBytes("Public Key", func(val []byte) bool {
+			return len(val) == cryptography.PrivateKeySize
+		})
+
+		signature := gui.GUI.OutputReadBytes("Signature", func(val []byte) bool {
+			return len(val) == cryptography.SignatureSize
+		})
+
+		var message []byte
+
+		if gui.GUI.OutputReadBool("Base64 message y/n. Leave empty for yes.", true, true) {
+			message = gui.GUI.OutputReadBytes("Message", nil)
+		} else {
+			message = []byte(gui.GUI.OutputReadString("Message"))
+		}
+
+		if gui.GUI.OutputReadBool("Hashing message using SHA3 y/n. Leave empty for yes.", true, true) {
+			message = cryptography.SHA3(message)
+		}
+
+		validite := crypto.VerifySignature(message, signature, publicKey)
+
+		gui.GUI.OutputWrite("Validite of signature: ", validite)
+
+		return
+	}
+
 	cliSignResolutionConditionalPayment := func(cmd string, ctx context.Context) (err error) {
 
 		extra := &transaction_simple_extra.TransactionSimpleExtraResolutionConditionalPayment{}
@@ -809,6 +838,7 @@ func (self *wallet) initWalletCLI() {
 
 	gui.GUI.CommandDefineCallback("Create (PublicKey, PrivateKey) pair", cliCreatePair, true)
 	gui.GUI.CommandDefineCallback("Sign message using PrivateKey", cliSignMessage, true)
+	gui.GUI.CommandDefineCallback("Verify signed message using PublicKey", cliVerifySignedMessage, true)
 	gui.GUI.CommandDefineCallback("Sign Resolution Conditional Payment", cliSignResolutionConditionalPayment, true)
 
 }
