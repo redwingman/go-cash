@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/tyler-smith/go-bip32"
+	"golang.org/x/exp/slices"
 	"math/rand"
 	"pandora-pay/address_balance_decrypter"
 	"pandora-pay/addresses"
@@ -420,23 +421,26 @@ func (self *wallet) RemoveAddressByIndex(index int, lock bool) (bool, error) {
 		return false, errors.New("Invalid Address Index")
 	}
 
-	adr := self.Addresses[index]
+	addr := self.Addresses[index]
 
 	removing := self.Addresses[index]
 
-	self.Addresses[index] = self.Addresses[len(self.Addresses)-1]
-	self.Addresses = self.Addresses[:len(self.Addresses)-1]
-	delete(self.addressesMap, string(adr.PublicKey))
+	self.Addresses = slices.Delete(self.Addresses, index, index+1) //keep order
+	delete(self.addressesMap, string(addr.PublicKey))
+
+	if index+1 == self.Count && addr.IsMine && addr.SeedIndex+1 == self.SeedIndex {
+		self.SeedIndex -= 1
+	}
 
 	self.Count -= 1
 
 	forging.Forging.Wallet.RemoveWallet(removing.PublicKey, false, nil, nil, 0)
 
 	self.updateWallet()
-	if err := self.saveWallet(index, index+1, self.Count, false); err != nil {
+	if err := self.saveWallet(index, index, self.Count, false); err != nil {
 		return false, err
 	}
-	globals.MainEvents.BroadcastEvent("wallet/removed", adr)
+	globals.MainEvents.BroadcastEvent("wallet/removed", addr)
 
 	return true, nil
 }

@@ -285,6 +285,9 @@ func (self *wallet) initWalletCLI() {
 
 			dataStorage := data_storage.NewDataStorage(reader)
 
+			var reg *registration.Registration
+			var plainAcc *plain_account.PlainAccount
+
 			for {
 
 				var addr *addresses.Address
@@ -292,7 +295,6 @@ func (self *wallet) initWalletCLI() {
 					return
 				}
 
-				var reg *registration.Registration
 				if reg, err = dataStorage.Regs.Get(string(addr.PublicKey)); err != nil {
 					return
 				}
@@ -304,7 +306,6 @@ func (self *wallet) initWalletCLI() {
 					continue
 				}
 
-				var plainAcc *plain_account.PlainAccount
 				if plainAcc, err = dataStorage.PlainAccs.Get(string(addr.PublicKey)); err != nil {
 					return
 				}
@@ -316,8 +317,26 @@ func (self *wallet) initWalletCLI() {
 					continue
 				}
 
-				return
+				break
 			}
+
+			for i := len(self.Addresses) - 1; i > 0; i-- {
+				addr := self.Addresses[i]
+
+				if reg, err = dataStorage.Regs.Get(string(addr.PublicKey)); err != nil {
+					return
+				}
+				if plainAcc, err = dataStorage.PlainAccs.Get(string(addr.PublicKey)); err != nil {
+					return
+				}
+				if reg == nil && plainAcc == nil {
+					if _, err = self.RemoveAddressByIndex(i, false); err != nil {
+						return
+					}
+				}
+			}
+
+			return
 
 		}); err != nil {
 			return
@@ -492,7 +511,7 @@ func (self *wallet) initWalletCLI() {
 
 	cliCreateNewAddress := func(cmd string, ctx context.Context) (err error) {
 
-		filename := gui.GUI.OutputReadFilename("Name of your new address", "", false)
+		filename := gui.GUI.OutputReadFilename("Name of your new address. Leave empty for default name", "", true)
 		staked := gui.GUI.OutputReadBool("Staked address ? y/n. Leave empty for n", true, false)
 		spendRequired := gui.GUI.OutputReadBool("Spend Key required ? y/n. Leave empty for n", true, false)
 
@@ -825,7 +844,7 @@ func (self *wallet) initWalletCLI() {
 	gui.GUI.CommandDefineCallback("Show Address Secret Key", cliShowAddressSecretKey, self.Loaded)
 	gui.GUI.CommandDefineCallback("Import Address Secret Key", cliImportAddressSecretKey, self.Loaded)
 	gui.GUI.CommandDefineCallback("Remove Address", cliRemoveAddress, self.Loaded)
-	gui.GUI.CommandDefineCallback("Export Staked Staked Address", cliExportSharedStakedAddress, self.Loaded)
+	gui.GUI.CommandDefineCallback("Export Shared Staked Address", cliExportSharedStakedAddress, self.Loaded)
 	gui.GUI.CommandDefineCallback("Export Addresses", cliExportAddresses, self.Loaded)
 	gui.GUI.CommandDefineCallback("Export Balances JSON", cliExportWalletBalancesJSON, self.Loaded)
 	gui.GUI.CommandDefineCallback("Export Address JSON", cliExportAddressJSON, self.Loaded)
