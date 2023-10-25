@@ -277,72 +277,7 @@ func (self *wallet) initWalletCLI() {
 	}
 
 	cliScanAddresses := func(cmd string, ctx context.Context) (err error) {
-
-		self.Lock.Lock()
-		defer self.Lock.Unlock()
-
-		if err = store.StoreBlockchain.DB.View(func(reader store_db_interface.StoreDBTransactionInterface) (err error) {
-
-			dataStorage := data_storage.NewDataStorage(reader)
-
-			var reg *registration.Registration
-			var plainAcc *plain_account.PlainAccount
-
-			for {
-
-				var addr *addresses.Address
-				if addr, err = self.GenerateNextAddress(false); err != nil {
-					return
-				}
-
-				if reg, err = dataStorage.Regs.Get(string(addr.PublicKey)); err != nil {
-					return
-				}
-
-				if reg != nil {
-					if _, err = self.AddNewAddress(false, "", reg.Staked, reg.SpendPublicKey != nil, true); err != nil {
-						return
-					}
-					continue
-				}
-
-				if plainAcc, err = dataStorage.PlainAccs.Get(string(addr.PublicKey)); err != nil {
-					return
-				}
-
-				if plainAcc != nil {
-					if _, err = self.AddNewAddress(false, "", false, false, true); err != nil {
-						return
-					}
-					continue
-				}
-
-				break
-			}
-
-			for i := len(self.Addresses) - 1; i > 0; i-- {
-				addr := self.Addresses[i]
-
-				if reg, err = dataStorage.Regs.Get(string(addr.PublicKey)); err != nil {
-					return
-				}
-				if plainAcc, err = dataStorage.PlainAccs.Get(string(addr.PublicKey)); err != nil {
-					return
-				}
-				if reg == nil && plainAcc == nil {
-					if _, err = self.RemoveAddressByIndex(i, false); err != nil {
-						return
-					}
-				}
-			}
-
-			return
-
-		}); err != nil {
-			return
-		}
-
-		return
+		return self.ScanAddresses()
 	}
 
 	cliExportWalletBalancesJSON := func(cmd string, ctx context.Context) (err error) {
