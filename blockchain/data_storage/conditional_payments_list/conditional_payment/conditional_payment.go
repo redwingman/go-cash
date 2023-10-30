@@ -14,7 +14,7 @@ type ConditionalPayment struct {
 	TxId               []byte   `json:"txId" msgpack:"txId"`
 	PayloadIndex       byte     `json:"payloadIndex" msgpack:"payloadIndex"`
 	Processed          bool     `json:"processed" msgpack:"processed"`
-	Asset              []byte   `json:"asset" msgpack:"defaultResolution"`
+	Asset              []byte   `json:"asset" msgpack:"asset"`
 	DefaultResolution  bool     `json:"defaultResolution" msgpack:"defaultResolution"`
 	ReceiverPublicKeys [][]byte `json:"receiverPublicKeys" msgpack:"receiverPublicKeys"`
 	ReceiverAmounts    [][]byte `json:"receiverAmounts" msgpack:"receiverAmounts"`
