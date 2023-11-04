@@ -88,6 +88,10 @@ var (
 
 func InitConfig() (err error) {
 
+	if err = initNetworkConfig(); err != nil {
+		return err
+	}
+
 	if arguments.Arguments["--network"] == "mainnet" {
 
 	} else if arguments.Arguments["--network"] == "testnet" {
