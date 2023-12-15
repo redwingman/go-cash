@@ -473,12 +473,12 @@ func (self *blockchain) AddBlocks(blocksComplete []*block_complete.BlockComplete
 		update.insertedTxsList = insertedTxsList
 		update.insertedBlocks = insertedBlocks
 		update.allTransactionsChanges = allTransactionsChanges
-	}
 
-	gui.GUI.Warning("-------------------------------------------")
-	gui.GUI.Warning(fmt.Sprintf("Included blocks %v - %d | TXs: %d | Hash %s", update.calledByForging, len(update.insertedBlocks), len(update.insertedTxs), base64.StdEncoding.EncodeToString(update.newChainData.Hash)))
-	gui.GUI.Warning(update.newChainData.Height, base64.StdEncoding.EncodeToString(update.newChainData.Hash), update.newChainData.Target.Text(10), update.newChainData.BigTotalDifficulty.Text(10))
-	gui.GUI.Warning("-------------------------------------------")
+		gui.GUI.Warning("-------------------------------------------")
+		gui.GUI.Warning(fmt.Sprintf("Included blocks %v - %d | TXs: %d | Hash %s", update.calledByForging, len(update.insertedBlocks), len(update.insertedTxs), base64.StdEncoding.EncodeToString(update.newChainData.Hash)))
+		gui.GUI.Warning(update.newChainData.Height, base64.StdEncoding.EncodeToString(update.newChainData.Hash), update.newChainData.Target.Text(10), update.newChainData.BigTotalDifficulty.Text(10))
+		gui.GUI.Warning("-------------------------------------------")
+	}
 
 	self.updatesQueue.updatesCn <- update
 
